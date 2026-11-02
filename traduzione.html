@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17202e">
+<title>3. Dal sorgente al programma in esecuzione · Assembly 8086</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="traduzione">
+<div id="layout">
+  <aside id="sidebar"></aside>
+  <main id="content">
+
+    <p class="kicker">Capitolo 3 di 8</p>
+    <h1>Dal sorgente al programma in esecuzione</h1>
+    <p class="lead">La CPU capisce solo numeri binari. Vediamo come un file di testo con <code>mov ax, 1</code> diventa un programma che gira davvero.</p>
+
+    <section id="teoria">
+      <h2>Teoria</h2>
+
+      <h3>I livelli di linguaggio</h3>
+      <ul>
+        <li><strong>Linguaggio ad alto livello</strong> (C, Python, Java): leggibile, indipendente dal processore. Una riga può diventare molte istruzioni.</li>
+        <li><strong>Assembly</strong>: le istruzioni della CPU scritte con nomi leggibili (<em>mnemonici</em>) come <code>mov</code>, <code>add</code>. In genere una riga corrisponde a una istruzione macchina. Dipende dal processore: un programma 8086 non funziona su ARM.</li>
+        <li><strong>Linguaggio macchina</strong>: le stesse istruzioni scritte come sequenze di byte. È l'unico che la CPU capisce davvero.</li>
+      </ul>
+      <p>Il programma che traduce l'assembly in linguaggio macchina si chiama <strong>assembler</strong> (MASM, TASM, NASM...). Il suo equivalente per i linguaggi ad alto livello si chiama <em>compilatore</em>.</p>
+
+      <h3>Le fasi: dal file .asm al programma</h3>
+      <div class="flow">
+        <div class="step">Sorgente<small>programma.asm</small></div><span class="arrow">→</span>
+        <div class="step">Assembler<small>traduce</small></div><span class="arrow">→</span>
+        <div class="step">File oggetto<small>programma.obj</small></div><span class="arrow">→</span>
+        <div class="step">Linker<small>collega</small></div><span class="arrow">→</span>
+        <div class="step">Eseguibile<small>programma.exe</small></div><span class="arrow">→</span>
+        <div class="step">Loader<small>carica in RAM</small></div><span class="arrow">→</span>
+        <div class="step">CPU<small>esegue</small></div>
+      </div>
+      <ol>
+        <li><strong>Scrittura</strong>: scrivi il file sorgente di testo (<code>.asm</code>).</li>
+        <li><strong>Assemblaggio</strong>: l'assembler traduce ogni istruzione in codice macchina e produce un <em>file oggetto</em> (<code>.obj</code>). Se ci sono errori di sintassi si ferma qui.</li>
+        <li><strong>Collegamento</strong>: il <strong>linker</strong> unisce uno o più file oggetto (e le eventuali librerie) in un unico <em>eseguibile</em> (<code>.exe</code>), sistemando i riferimenti tra i vari pezzi.</li>
+        <li><strong>Caricamento</strong>: quando lanci il programma, il <strong>loader</strong> del sistema operativo lo copia nella RAM e prepara i registri di segmento.</li>
+        <li><strong>Esecuzione</strong>: la CPU legge ed esegue le istruzioni una dopo l'altra.</li>
+      </ol>
+
+      <h3>Cosa fa l'assembler</h3>
+      <ul>
+        <li>Sostituisce ogni <strong>mnemonico</strong> con il suo <strong>codice operativo</strong> (<em>opcode</em>), un numero che identifica l'istruzione.</li>
+        <li>Trasforma i numeri scritti da te (<code>10</code>, <code>0Ah</code>, <code>1010b</code>) in binario.</li>
+        <li>Sostituisce le <strong>etichette</strong> e i nomi delle variabili con gli indirizzi di memoria corrispondenti (di solito leggendo il programma due volte: la prima per scoprire gli indirizzi, la seconda per generare il codice).</li>
+        <li>Riserva la memoria per i dati dichiarati con <code>db</code>, <code>dw</code>...</li>
+        <li>Esegue le <strong>direttive</strong> (<code>.data</code>, <code>.code</code>, <code>.model</code>): sono istruzioni per l'assembler, <em>non</em> per la CPU, e non diventano codice eseguibile.</li>
+      </ul>
+
+      <h3>Esempi di traduzione</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Assembly</th><th>Codice macchina (hex)</th><th>Byte</th></tr></thead>
+          <tbody>
+            <tr><td><code>mov ax, 1</code></td><td><code>B8 01 00</code></td><td>3</td></tr>
+            <tr><td><code>inc ax</code></td><td><code>40</code></td><td>1</td></tr>
+            <tr><td><code>push ax</code></td><td><code>50</code></td><td>1</td></tr>
+            <tr><td><code>nop</code></td><td><code>90</code></td><td>1</td></tr>
+            <tr><td><code>ret</code></td><td><code>C3</code></td><td>1</td></tr>
+            <tr><td><code>int 21h</code></td><td><code>CD 21</code></td><td>2</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>In <code>B8 01 00</code> il primo byte, <code>B8</code>, è l'opcode di «copia un numero a 16 bit in AX»; i due byte successivi sono il numero <code>0001h</code>, scritto con il byte basso per primo (<code>01 00</code>): questa regola si chiama <em>little endian</em> e la vedremo nel capitolo 7.</p>
+      <div class="box nota">
+        <span class="box-title">Lunghezza variabile</span>
+        <p>Le istruzioni dell'8086 occupano da 1 a diversi byte. La CPU deve quindi leggere il primo byte (l'opcode) per capire quanti altri byte appartengono alla stessa istruzione.</p>
+      </div>
+
+      <h3>Il ciclo fetch – decode – execute</h3>
+      <p>Una volta in memoria, il programma è solo una sequenza di byte. La CPU li esegue ripetendo all'infinito tre fasi:</p>
+      <div class="flow">
+        <div class="step">1. Fetch<small>legge l'istruzione dalla RAM</small></div><span class="arrow">→</span>
+        <div class="step">2. Decode<small>capisce di che istruzione si tratta</small></div><span class="arrow">→</span>
+        <div class="step">3. Execute<small>la esegue</small></div><span class="arrow">↺</span>
+      </div>
+      <p>L'indirizzo della prossima istruzione è sempre nella coppia di registri <strong>CS:IP</strong> (CS = segmento del codice, IP = <em>Instruction Pointer</em>). Dopo il fetch, IP avanza di tanti byte quanti ne occupa l'istruzione appena letta. Le istruzioni di salto (<code>jmp</code>, <code>call</code>...) cambiano IP per far continuare il programma da un'altra parte.</p>
+      <div class="box teoria">
+        <span class="box-title">Istruzioni e dati sono entrambi byte</span>
+        <p>In memoria non c'è differenza tra istruzioni e dati: sono tutti byte. Cosa siano lo decide la CPU: ciò che trova a partire da CS:IP lo tratta come istruzione. Per questo un errore può far eseguire dei dati come se fossero codice.</p>
+      </div>
+
+      <div class="box breve">
+        <span class="box-title">In breve</span>
+        <ul>
+          <li>Sorgente → assembler → file oggetto → linker → eseguibile → loader → CPU.</li>
+          <li>L'assembler traduce quasi uno a uno; le direttive non diventano istruzioni.</li>
+          <li>La CPU ripete fetch, decode, execute leggendo l'istruzione all'indirizzo CS:IP.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="domande" class="practice">
+      <h2>Domande</h2>
+
+      <div class="quiz" data-answer="b" data-explain="L'assembler traduce il codice assembly in codice macchina (file oggetto).">
+        <p class="q">Quale programma traduce il sorgente assembly in codice macchina?</p>
+        <label><input type="radio" value="a"> Il linker</label>
+        <label><input type="radio" value="b"> L'assembler</label>
+        <label><input type="radio" value="c"> Il loader</label>
+        <label><input type="radio" value="d"> Il debugger</label>
+      </div>
+
+      <div class="quiz" data-answer="c" data-explain="Il linker unisce i file oggetto e le librerie in un unico file eseguibile.">
+        <p class="q">Qual è il compito del linker?</p>
+        <label><input type="radio" value="a"> Eseguire le istruzioni</label>
+        <label><input type="radio" value="b"> Tradurre i mnemonici in binario</label>
+        <label><input type="radio" value="c"> Unire i file oggetto e le librerie in un eseguibile</label>
+        <label><input type="radio" value="d"> Caricare il programma in RAM</label>
+      </div>
+
+      <div class="quiz" data-answer="a" data-explain="La CPU legge l'istruzione (fetch), la interpreta (decode) e la esegue (execute), poi ricomincia.">
+        <p class="q">In quale ordine lavora la CPU su ogni istruzione?</p>
+        <label><input type="radio" value="a"> Fetch, decode, execute</label>
+        <label><input type="radio" value="b"> Decode, fetch, execute</label>
+        <label><input type="radio" value="c"> Execute, fetch, decode</label>
+        <label><input type="radio" value="d"> Fetch, execute, decode</label>
+      </div>
+
+      <div class="quiz" data-answer="d" data-explain=".data è una direttiva: serve all'assembler per organizzare il programma e non genera nessuna istruzione per la CPU.">
+        <p class="q">Quale di queste righe NON diventa un'istruzione macchina?</p>
+        <label><input type="radio" value="a"> <code>mov ax, 5</code></label>
+        <label><input type="radio" value="b"> <code>inc cx</code></label>
+        <label><input type="radio" value="c"> <code>int 21h</code></label>
+        <label><input type="radio" value="d"> <code>.data</code></label>
+      </div>
+
+      <div class="quiz" data-answer="c" data-explain="CS contiene il segmento del codice e IP l'offset della prossima istruzione: l'indirizzo è CS:IP.">
+        <p class="q">Quale coppia di registri indica l'indirizzo della prossima istruzione da eseguire?</p>
+        <label><input type="radio" value="a"> SS:SP</label>
+        <label><input type="radio" value="b"> DS:SI</label>
+        <label><input type="radio" value="c"> CS:IP</label>
+        <label><input type="radio" value="d"> ES:DI</label>
+      </div>
+    </section>
+
+    <section id="esercizi" class="practice">
+      <h2>Esercizi</h2>
+
+      <div class="exercise" data-type="seq" data-answers="DBAEC|D,B,A,E,C|D-B-A-E-C" data-solution="D B A E C" data-placeholder="Scrivi le 5 lettere in ordine" data-hint="Si parte dal file sorgente e si arriva all'esecuzione: scrittura, assembler, linker, loader, CPU." data-explain="Ordine corretto: D (scrivo il sorgente), B (assembler), A (linker), E (il sistema operativo carica), C (la CPU esegue).">
+        <p class="q">Metti in ordine le fasi scrivendo le lettere (per esempio ABCDE):</p>
+        <ul>
+          <li>A) Il linker crea l'eseguibile</li>
+          <li>B) L'assembler crea il file oggetto</li>
+          <li>C) La CPU esegue il programma</li>
+          <li>D) Scrivo il file sorgente .asm</li>
+          <li>E) Il sistema operativo carica il programma in RAM</li>
+        </ul>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="3" data-label="Byte =" data-hint="Conta i byte della sequenza B8 01 00." data-explain="B8 01 00 sono tre byte: l'opcode più il numero a 16 bit.">
+        <p class="q">L'istruzione <code>mov ax, 1</code> si traduce in <code>B8 01 00</code>. Quanti byte occupa?</p>
+      </div>
+
+      <div class="exercise" data-type="text" data-answers="int 21h|int 21|int 0x21" data-solution="int 21h" data-hint="È l'istruzione con cui si chiama il sistema operativo (la vedrai nel capitolo 8)." data-explain="CD è l'opcode di int e 21 è il numero dell'interrupt: int 21h.">
+        <p class="q">Quale istruzione assembly corrisponde al codice macchina <code>CD 21</code>? Scrivila.</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="90" data-label="Codice =" data-hint="Guarda la tabella degli esempi di traduzione." data-explain="nop («nessuna operazione») è il byte 90h.">
+        <p class="q">Qual è il codice macchina (2 cifre esadecimali) dell'istruzione <code>nop</code>?</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="0103" data-label="IP =" data-hint="Somma 3 al valore di IP, ragionando in esadecimale." data-explain="Dopo il fetch IP avanza della lunghezza dell'istruzione: 0100h + 3 = 0103h.">
+        <p class="q">Se <code>IP = 0100h</code> e l'istruzione appena letta occupa 3 byte, quanto vale IP dopo il fetch? (esadecimale)</p>
+      </div>
+
+      <div class="exercise" data-type="text" data-answers="loader" data-hint="Le tre parole possibili sono assembler, linker, loader: pensa a quale «carica»." data-explain="Il loader del sistema operativo copia l'eseguibile in RAM e lo fa partire.">
+        <p class="q">Come si chiama la parte del sistema operativo che carica l'eseguibile in memoria? (assembler / linker / loader)</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

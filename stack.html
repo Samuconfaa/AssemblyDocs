@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17202e">
+<title>4. Lo stack e la sua gestione · Assembly 8086</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="stack">
+<div id="layout">
+  <aside id="sidebar"></aside>
+  <main id="content">
+
+    <p class="kicker">Capitolo 4 di 8</p>
+    <h1>Lo stack e la sua gestione</h1>
+    <p class="lead">I registri sono pochi: quando non bastano, la CPU mette i dati «da parte» in una pila di memoria chiamata stack.</p>
+
+    <section id="teoria">
+      <h2>Teoria</h2>
+
+      <h3>Che cos'è lo stack</h3>
+      <p>Lo <strong>stack</strong> (pila) è una zona di RAM gestita con la regola <strong>LIFO</strong>: <em>Last In, First Out</em>, cioè «l'ultimo che entra è il primo che esce». Come una pila di piatti: puoi mettere un piatto solo in cima e puoi togliere solo quello in cima.</p>
+      <ul>
+        <li>Si trova nel <strong>segmento dello stack</strong>, indicato dal registro <code>SS</code>.</li>
+        <li>Il registro <code>SP</code> (<em>Stack Pointer</em>) contiene l'offset della <strong>cima</strong> della pila: l'indirizzo completo è <code>SS:SP</code>.</li>
+        <li>Nell'8086 lo stack contiene solo <strong>word da 16 bit</strong> (2 byte alla volta).</li>
+        <li>Lo stack <strong>cresce verso il basso</strong>: ogni nuovo dato viene scritto a un indirizzo più basso del precedente.</li>
+      </ul>
+
+      <h3>PUSH e POP</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Istruzione</th><th>Cosa fa, passo per passo</th></tr></thead>
+          <tbody>
+            <tr><td><code>push src</code></td><td>1) SP = SP − 2 &nbsp;&nbsp; 2) scrive la word <code>src</code> all'indirizzo SS:SP</td></tr>
+            <tr><td><code>pop dest</code></td><td>1) legge la word da SS:SP e la mette in <code>dest</code> &nbsp;&nbsp; 2) SP = SP + 2</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Si capisce meglio con un esempio. Supponiamo SP = 0100h all'inizio (stack vuoto), AX = 1111h e BX = 2222h:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Istruzione</th><th>SP dopo</th><th>Contenuto dello stack (dalla cima)</th></tr></thead>
+          <tbody>
+            <tr><td><em>(inizio)</em></td><td>0100h</td><td>vuoto</td></tr>
+            <tr><td><code>push ax</code></td><td>00FEh</td><td>1111h</td></tr>
+            <tr><td><code>push bx</code></td><td>00FCh</td><td>2222h, 1111h</td></tr>
+            <tr><td><code>pop cx</code></td><td>00FEh</td><td>1111h &nbsp;&nbsp; (CX = 2222h)</td></tr>
+            <tr><td><code>pop dx</code></td><td>0100h</td><td>vuoto &nbsp;&nbsp; (DX = 1111h)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="box attenzione">
+        <span class="box-title">Regole dell'8086</span>
+        <ul>
+          <li>Si può fare push/pop solo di registri (o memoria) da <strong>16 bit</strong>: <code>push al</code> è sbagliato.</li>
+          <li>I dati escono in <strong>ordine inverso</strong> rispetto a come sono entrati.</li>
+          <li>Un <code>pop</code> non cancella la memoria: sposta solo SP. Il vecchio valore resta lì finché qualcuno non lo sovrascrive.</li>
+        </ul>
+      </div>
+
+      <h3>A cosa serve lo stack</h3>
+      <ol>
+        <li><strong>Salvare registri</strong> che servono per un altro scopo e poi ripristinarli.</li>
+        <li><strong>Scambiare o riordinare</strong> valori senza usare altri registri.</li>
+        <li><strong>Chiamare sottoprogrammi</strong>: <code>call</code> salva sullo stack l'indirizzo di ritorno e <code>ret</code> lo recupera (capitolo 6).</li>
+        <li><strong>Passare parametri</strong> e tenere variabili locali (capitolo 6).</li>
+        <li><strong>Gestire le interruzioni</strong>: <code>int</code> salva sullo stack FLAGS, CS e IP (capitolo 8).</li>
+      </ol>
+
+      <h3>Esempi</h3>
+      <p>Salvare un registro e ripristinarlo:</p>
+      <pre class="asm">push cx          ; salvo il vecchio CX
+mov cx, 10       ; uso CX per altro
+; ... codice che usa CX ...
+pop cx           ; ripristino il vecchio CX</pre>
+      <p>Scambiare AX e BX con lo stack (equivale a <code>xchg ax, bx</code>):</p>
+      <pre class="asm">push ax          ; pila: AX
+push bx          ; pila: BX, AX   (BX è in cima)
+pop ax           ; AX riceve il vecchio BX
+pop bx           ; BX riceve il vecchio AX</pre>
+
+      <div class="box teoria">
+        <span class="box-title">Regola d'oro: bilanciare push e pop</span>
+        <p>Ogni <code>push</code> deve avere il suo <code>pop</code>, e i <code>pop</code> vanno scritti nell'ordine <strong>inverso</strong> dei <code>push</code>. Se non sono bilanciati, lo stack si sposta e il programma si rompe.</p>
+      </div>
+
+      <h3>Gli errori dello stack</h3>
+      <ul>
+        <li><strong>Stack overflow</strong>: troppi <code>push</code> senza <code>pop</code> (per esempio in un ciclo): la pila supera lo spazio riservato e sovrascrive altri dati.</li>
+        <li><strong>Stack underflow</strong>: più <code>pop</code> che <code>push</code>: si leggono dati che non sono tuoi.</li>
+      </ul>
+      <p>La dimensione dello stack si decide nel programma, per esempio con la direttiva <code>.stack 100h</code> che riserva 100h = 256 byte.</p>
+
+      <div class="box breve">
+        <span class="box-title">In breve</span>
+        <ul>
+          <li>Stack = pila LIFO in RAM, cima indicata da SS:SP, cresce verso il basso.</li>
+          <li><code>push</code>: SP − 2 e scrive. <code>pop</code>: legge e SP + 2. Sempre 16 bit.</li>
+          <li>Push e pop vanno bilanciati e in ordine inverso.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="domande" class="practice">
+      <h2>Domande</h2>
+
+      <div class="quiz" data-answer="b" data-explain="LIFO significa Last In, First Out: l'ultimo dato inserito è il primo a essere estratto.">
+        <p class="q">Che cosa significa LIFO?</p>
+        <label><input type="radio" value="a"> First In, First Out</label>
+        <label><input type="radio" value="b"> Last In, First Out</label>
+        <label><input type="radio" value="c"> Last In, Fast Out</label>
+        <label><input type="radio" value="d"> Low In, First Out</label>
+      </div>
+
+      <div class="quiz" data-answer="c" data-explain="push sottrae 2 a SP perché lo stack cresce verso il basso e ogni dato è di 2 byte: 0100h − 2 = 00FEh.">
+        <p class="q">Se <code>SP = 0100h</code>, quanto vale SP dopo <code>push ax</code>?</p>
+        <label><input type="radio" value="a"> 0102h</label>
+        <label><input type="radio" value="b"> 00FFh</label>
+        <label><input type="radio" value="c"> 00FEh</label>
+        <label><input type="radio" value="d"> 0100h (non cambia)</label>
+      </div>
+
+      <div class="quiz" data-answer="a" data-explain="SS è il segmento dello stack e SP l'offset della cima: l'indirizzo è SS:SP.">
+        <p class="q">Quale coppia di registri indica la cima dello stack?</p>
+        <label><input type="radio" value="a"> SS:SP</label>
+        <label><input type="radio" value="b"> CS:IP</label>
+        <label><input type="radio" value="c"> DS:BX</label>
+        <label><input type="radio" value="d"> ES:DI</label>
+      </div>
+
+      <div class="quiz" data-answer="b" data-explain="Nell'8086 lo stack lavora a word: ogni push occupa 2 byte.">
+        <p class="q">Quanti byte occupa sullo stack un <code>push ax</code>?</p>
+        <label><input type="radio" value="a"> 1</label>
+        <label><input type="radio" value="b"> 2</label>
+        <label><input type="radio" value="c"> 4</label>
+        <label><input type="radio" value="d"> Dipende dal valore di AX</label>
+      </div>
+
+      <div class="quiz" data-answer="b" data-explain="I pop vanno in ordine inverso rispetto ai push: l'ultimo registro salvato (BX) va ripristinato per primo.">
+        <p class="q">Qual è la sequenza corretta per salvare e poi ripristinare AX e BX?</p>
+        <label><input type="radio" value="a"> <code>push ax</code>, <code>push bx</code>, <code>pop ax</code>, <code>pop bx</code></label>
+        <label><input type="radio" value="b"> <code>push ax</code>, <code>push bx</code>, <code>pop bx</code>, <code>pop ax</code></label>
+        <label><input type="radio" value="c"> <code>pop ax</code>, <code>pop bx</code>, <code>push ax</code>, <code>push bx</code></label>
+        <label><input type="radio" value="d"> <code>push ax</code>, <code>pop bx</code>, <code>push bx</code>, <code>pop ax</code></label>
+      </div>
+
+      <div class="quiz" data-answer="d" data-explain="Troppi push senza pop riempiono lo stack oltre il limite: è lo stack overflow.">
+        <p class="q">Come si chiama l'errore che si verifica con troppi <code>push</code> senza i relativi <code>pop</code>?</p>
+        <label><input type="radio" value="a"> Stack underflow</label>
+        <label><input type="radio" value="b"> Divisione per zero</label>
+        <label><input type="radio" value="c"> Segment fault</label>
+        <label><input type="radio" value="d"> Stack overflow</label>
+      </div>
+    </section>
+
+    <section id="esercizi" class="practice">
+      <h2>Esercizi</h2>
+
+      <div class="exercise" data-type="num" data-answers="2" data-label="AX =" data-hint="Con i pop i valori escono al contrario: l'ultimo inserito esce per primo." data-explain="Pila dopo i push: BX (2) in cima, AX (1) sotto. Il primo pop (pop ax) prende il 2.">
+        <p class="q">Quanto vale AX alla fine? (decimale)</p>
+        <pre class="asm">mov ax, 1
+mov bx, 2
+push ax
+push bx
+pop ax
+pop bx</pre>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="1" data-label="BX =" data-hint="Con lo stesso codice di prima: il secondo pop prende il valore rimasto sotto." data-explain="Il secondo pop (pop bx) estrae il valore rimasto, cioè il vecchio AX = 1. I due registri sono stati scambiati.">
+        <p class="q">Con lo stesso codice dell'esercizio precedente, quanto vale BX alla fine? (decimale)</p>
+        <pre class="asm">mov ax, 1
+mov bx, 2
+push ax
+push bx
+pop ax
+pop bx</pre>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="00FA" data-label="SP =" data-hint="Ogni push toglie 2 a SP: tre push tolgono 6. Calcola 0100h − 6 in esadecimale." data-explain="3 push × 2 byte = 6 byte. 0100h − 6 = 00FAh.">
+        <p class="q">Se SP vale 0100h all'inizio, quanto vale SP dopo 3 push? (esadecimale)</p>
+      </div>
+
+      <div class="exercise" data-type="text" data-answers="push cx" data-solution="push cx" data-hint="L'istruzione è push seguita dal nome del registro." data-explain="push cx salva CX sulla cima dello stack.">
+        <p class="q">Scrivi l'istruzione che salva il registro CX sullo stack.</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="30" data-label="AX =" data-hint="L'ultimo push è stato push cx (30): è il primo valore a uscire." data-explain="Pila dalla cima: 30, 20, 10. Il primo pop (pop ax) prende 30.">
+        <p class="q">Quanto vale AX alla fine? (decimale)</p>
+        <pre class="asm">mov ax, 10
+mov bx, 20
+mov cx, 30
+push ax
+push bx
+push cx
+pop ax
+pop bx
+pop cx</pre>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="10" data-label="CX =" data-hint="L'ultimo pop (pop cx) estrae il valore che era in fondo alla pila." data-explain="L'ultimo pop estrae il valore più vecchio, cioè quello pushato per primo (AX = 10).">
+        <p class="q">Con lo stesso codice dell'esercizio precedente, quanto vale CX alla fine? (decimale)</p>
+        <pre class="asm">mov ax, 10
+mov bx, 20
+mov cx, 30
+push ax
+push bx
+push cx
+pop ax
+pop bx
+pop cx</pre>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="00FC" data-label="SP =" data-hint="Ogni pop aggiunge 2 a SP." data-explain="Due pop = 4 byte: 00F8h + 4 = 00FCh.">
+        <p class="q">Se SP vale 00F8h e vengono eseguiti due <code>pop</code>, quanto vale SP? (esadecimale)</p>
+      </div>
+    </section>
+
+    <section id="prova">
+      <h2>Prova tu</h2>
+      <p>Il simulatore mostra anche lo stack: guarda come cambia SP a ogni <code>push</code> e <code>pop</code>. Qui è rimasto un valore sullo stack. Prova ad aggiungere un secondo <code>pop</code>, poi un terzo: cosa succede?</p>
+      <div class="sim"><textarea>mov ax, 1111h
+mov bx, 2222h
+push ax           ; SP = 00FE
+push bx           ; SP = 00FC
+pop cx            ; CX riceve 2222h
+; prova ad aggiungere:  pop dx</textarea></div>
+    </section>
+
+  </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
