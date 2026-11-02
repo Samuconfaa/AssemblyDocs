@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17202e">
+<title>8. Hello World e le chiamate di sistema · Assembly 8086</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="hello-world">
+<div id="layout">
+  <aside id="sidebar"></aside>
+  <main id="content">
+
+    <p class="kicker">Capitolo 8 di 8</p>
+    <h1>Hello World e le chiamate di sistema</h1>
+    <p class="lead">Il primo programma completo. Per scrivere sullo schermo l'assembly non ha un'istruzione «stampa»: bisogna chiedere aiuto al sistema operativo.</p>
+
+    <section id="teoria">
+      <h2>Teoria</h2>
+
+      <h3>Il programma completo</h3>
+      <pre class="asm">.model small
+.stack 100h
+
+.data
+    msg db "Hello, World!", 0Dh, 0Ah, "$"
+
+.code
+main proc
+    mov ax, @data        ; imposta il segmento dati
+    mov ds, ax
+
+    mov dx, offset msg   ; DX = indirizzo del testo
+    mov ah, 09h          ; servizio 09h: stampa stringa
+    int 21h              ; chiama il DOS
+
+    mov ah, 4Ch          ; servizio 4Ch: termina il programma
+    mov al, 0            ; codice di uscita 0 = nessun errore
+    int 21h
+main endp
+end main</pre>
+
+      <h3>Riga per riga</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Riga</th><th>Cosa fa</th></tr></thead>
+          <tbody>
+            <tr><td><code>.model small</code></td><td>Direttiva: un segmento per il codice e uno per dati e stack, di al massimo 64 KB ciascuno.</td></tr>
+            <tr><td><code>.stack 100h</code></td><td>Riserva 256 byte per lo stack.</td></tr>
+            <tr><td><code>.data</code></td><td>Inizia il segmento dei dati.</td></tr>
+            <tr><td><code>msg db "Hello, World!", 0Dh, 0Ah, "$"</code></td><td>Variabile <code>msg</code>: i caratteri del testo, poi 0Dh (ritorno a inizio riga), 0Ah (nuova riga) e <code>$</code>, il terminatore richiesto dal DOS. Sono 16 byte.</td></tr>
+            <tr><td><code>.code</code> / <code>main proc</code></td><td>Inizia il segmento del codice e la procedura principale.</td></tr>
+            <tr><td><code>mov ax, @data</code> / <code>mov ds, ax</code></td><td>Fa puntare DS al segmento dati (capitolo 5), altrimenti il DOS non troverebbe <code>msg</code>.</td></tr>
+            <tr><td><code>mov dx, offset msg</code></td><td>Mette in DX l'offset di <code>msg</code>: l'indirizzo completo del testo è quindi <code>DS:DX</code>.</td></tr>
+            <tr><td><code>mov ah, 09h</code></td><td>Sceglie il servizio del DOS da usare: 09h = stampa la stringa a DS:DX.</td></tr>
+            <tr><td><code>int 21h</code></td><td>Chiede il servizio al DOS: è la chiamata di sistema.</td></tr>
+            <tr><td><code>mov ah, 4Ch</code> / <code>mov al, 0</code> / <code>int 21h</code></td><td>Servizio 4Ch: termina il programma, con il codice di uscita in AL.</td></tr>
+            <tr><td><code>main endp</code> / <code>end main</code></td><td>Fine della procedura e del programma; <code>main</code> è il punto da cui partire.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Eseguilo passo per passo</h3>
+      <p>Premi «Avanti» per eseguire il programma un'istruzione alla volta e guardare registri e schermo.</p>
+      <div class="stepper" data-id="hello"></div>
+
+      <h3>Che cos'è una chiamata di sistema</h3>
+      <p>Il programma non può parlare direttamente con lo schermo, il disco o la tastiera: l'hardware lo gestisce il <strong>sistema operativo</strong>, che conosce tutti i dettagli dei vari dispositivi. Quando il programma ha bisogno di un'operazione di questo tipo, la <strong>chiede</strong> al sistema operativo: questa richiesta è una <strong>chiamata di sistema</strong> (<em>system call</em>).</p>
+      <p>Nei sistemi moderni questa separazione è imposta dalla CPU stessa: i programmi non possono toccare direttamente l'hardware, ma solo passare dalle chiamate di sistema, che sono l'unica «porta» controllata. Il DOS era meno protetto, ma usa lo stesso schema.</p>
+
+      <h3>Come funziona int 21h</h3>
+      <p>Sull'8086 le chiamate di sistema usano le <strong>interruzioni software</strong>: l'istruzione <code>int n</code> (dall'inglese <em>interrupt</em>) fa saltare la CPU al codice del sistema operativo associato al numero <code>n</code>. Per il DOS il numero è <code>21h</code>. Passo per passo:</p>
+      <ol>
+        <li>Prima della chiamata, il programma prepara i registri: in <strong>AH</strong> il numero del servizio richiesto, negli altri registri (DX, AL...) i parametri.</li>
+        <li><code>int 21h</code> (due byte: <code>CD 21</code>) viene eseguita: la CPU salva sullo stack <strong>FLAGS, CS e IP</strong>, per sapere dove tornare.</li>
+        <li>La CPU cerca dove si trova il codice del DOS nella <strong>tabella dei vettori di interrupt</strong>, che si trova all'indirizzo fisico 0000:0000. Ogni voce occupa 4 byte (offset e segmento della routine), quindi la voce dell'interrupt 21h è all'indirizzo <code>21h × 4 = 84h</code>, cioè <code>0000:0084h</code>.</li>
+        <li>La CPU salta a quell'indirizzo ed esegue il codice del DOS.</li>
+        <li>Il DOS guarda AH per capire cosa fare, esegue il servizio (per esempio scrive sullo schermo) e termina con l'istruzione <code>iret</code>.</li>
+        <li><code>iret</code> ripristina IP, CS e FLAGS dallo stack: il programma riprende dall'istruzione dopo <code>int 21h</code>.</li>
+      </ol>
+
+      <h3>I servizi più usati</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>AH</th><th>Cosa fa</th><th>Parametri</th></tr></thead>
+          <tbody>
+            <tr><td><code>01h</code></td><td>Legge un carattere dalla tastiera (e lo mostra)</td><td>risultato in AL</td></tr>
+            <tr><td><code>02h</code></td><td>Stampa un carattere</td><td>il carattere in DL</td></tr>
+            <tr><td><code>09h</code></td><td>Stampa una stringa che finisce con <code>$</code></td><td>indirizzo in DS:DX</td></tr>
+            <tr><td><code>4Ch</code></td><td>Termina il programma</td><td>codice di uscita in AL</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Per stampare un singolo carattere:</p>
+      <pre class="asm">mov dl, 'A'      ; il carattere da stampare
+mov ah, 02h      ; servizio: stampa un carattere
+int 21h</pre>
+
+      <div class="box nota">
+        <span class="box-title">Curiosità: Linux</span>
+        <p>L'idea è la stessa su Linux a 32 bit: il numero del servizio va in EAX e i parametri negli altri registri. Per stampare si usa il servizio «write» (numero 4):</p>
+        <pre class="asm">mov eax, 4        ; numero del servizio: write
+mov ebx, 1        ; 1 = schermo (stdout)
+mov ecx, msg      ; indirizzo del testo
+mov edx, len      ; quanti caratteri stampare
+int 80h           ; chiama il kernel</pre>
+        <p>Nei sistemi a 64 bit si usa l'istruzione <code>syscall</code>, ma il principio è identico: <strong>numero del servizio in un registro, parametri negli altri, un'istruzione speciale per passare la parola al sistema operativo</strong>.</p>
+      </div>
+
+      <h3>Come provarlo</h3>
+      <p>Copia il programma in un editor, salvalo come <code>hello.asm</code> e:</p>
+      <ul>
+        <li>con <strong>emu8086</strong> incollalo nell'editor e premi «Emulate» poi «Run» (puoi anche eseguirlo passo per passo e osservare i registri);</li>
+        <li>con <strong>DOSBox</strong>: assembla con <code>tasm hello.asm</code>, collega con <code>tlink hello.obj</code> ed esegui <code>hello.exe</code> (oppure gli equivalenti MASM: <code>ml</code>, <code>link</code>).</li>
+      </ul>
+      <p>È esattamente il percorso del capitolo 3: sorgente → assembler → linker → eseguibile.</p>
+
+      <div class="box breve">
+        <span class="box-title">In breve</span>
+        <ul>
+          <li>Per usare lo schermo si chiede un servizio al sistema operativo: chiamata di sistema.</li>
+          <li>Sull'8086/DOS: numero del servizio in AH, parametri in altri registri, poi <code>int 21h</code>.</li>
+          <li><code>int</code> salva FLAGS, CS, IP, salta al DOS tramite la tabella dei vettori (voce 21h all'indirizzo 0000:0084h); <code>iret</code> ripristina e ritorna.</li>
+          <li>09h stampa una stringa che finisce con <code>$</code>, 02h un carattere, 4Ch termina il programma.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="domande" class="practice">
+      <h2>Domande</h2>
+
+      <div class="quiz" data-answer="b" data-explain="int 21h è l'istruzione che chiama le funzioni del DOS (call e jmp fanno altro; sys non esiste nell'8086).">
+        <p class="q">Quale istruzione richiama un servizio del DOS?</p>
+        <label><input type="radio" value="a"> <code>call 21h</code></label>
+        <label><input type="radio" value="b"> <code>int 21h</code></label>
+        <label><input type="radio" value="c"> <code>jmp 21h</code></label>
+        <label><input type="radio" value="d"> <code>sys 21h</code></label>
+      </div>
+
+      <div class="quiz" data-answer="a" data-explain="Il DOS ha molti servizi con la stessa istruzione int 21h: il numero in AH dice quale si vuole.">
+        <p class="q">Che cosa si mette in AH prima di <code>int 21h</code>?</p>
+        <label><input type="radio" value="a"> Il numero del servizio richiesto</label>
+        <label><input type="radio" value="b"> L'indirizzo della stringa</label>
+        <label><input type="radio" value="c"> Il carattere da stampare, sempre</label>
+        <label><input type="radio" value="d"> Il codice di errore</label>
+      </div>
+
+      <div class="quiz" data-answer="c" data-explain="Il servizio 09h smette di stampare quando incontra il carattere $.">
+        <p class="q">Quale carattere termina una stringa per il servizio 09h?</p>
+        <label><input type="radio" value="a"> Il byte 0</label>
+        <label><input type="radio" value="b"> Il ritorno a capo</label>
+        <label><input type="radio" value="c"> Il simbolo <code>$</code></label>
+        <label><input type="radio" value="d"> Il simbolo <code>#</code></label>
+      </div>
+
+      <div class="quiz" data-answer="d" data-explain="Il servizio 4Ch termina il programma, con il codice di uscita in AL.">
+        <p class="q">Quale valore di AH serve per terminare il programma?</p>
+        <label><input type="radio" value="a"> 01h</label>
+        <label><input type="radio" value="b"> 09h</label>
+        <label><input type="radio" value="c"> 02h</label>
+        <label><input type="radio" value="d"> 4Ch</label>
+      </div>
+
+      <div class="quiz" data-answer="b" data-explain="L'hardware lo gestisce il sistema operativo: il programma gli chiede di fare le operazioni per suo conto, con una chiamata di sistema.">
+        <p class="q">Perché un programma usa le chiamate di sistema invece di scrivere direttamente sullo schermo?</p>
+        <label><input type="radio" value="a"> Perché è più lento, ma più bello</label>
+        <label><input type="radio" value="b"> Perché l'hardware è gestito dal sistema operativo, che opera per conto del programma</label>
+        <label><input type="radio" value="c"> Perché la CPU non ha altre istruzioni</label>
+        <label><input type="radio" value="d"> Perché lo schermo non esiste</label>
+      </div>
+
+      <div class="quiz" data-answer="a" data-explain="La tabella dei vettori inizia a 0000:0000 e ogni voce è di 4 byte: la voce 21h è a 21h × 4 = 84h.">
+        <p class="q">Dove trova la CPU l'indirizzo della routine di <code>int 21h</code>?</p>
+        <label><input type="radio" value="a"> Nella tabella dei vettori, all'indirizzo 0000:0084h</label>
+        <label><input type="radio" value="b"> Nel registro AX</label>
+        <label><input type="radio" value="c"> In cima allo stack</label>
+        <label><input type="radio" value="d"> In DS:DX</label>
+      </div>
+    </section>
+
+    <section id="esercizi" class="practice">
+      <h2>Esercizi</h2>
+
+      <div class="exercise" data-type="num" data-answers="02" data-label="AH =" data-hint="Guarda la tabella dei servizi più usati." data-explain="Il servizio 02h stampa il carattere contenuto in DL.">
+        <p class="q">Quale valore (esadecimale, 2 cifre) va messo in AH per stampare un singolo carattere contenuto in DL?</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="84" data-label="Offset =" data-hint="Ogni voce della tabella è di 4 byte: moltiplica il numero dell'interrupt per 4." data-explain="21h = 33 decimale; 33 × 4 = 132 = 84h. Quindi la voce è a 0000:0084h.">
+        <p class="q">A quale offset (esadecimale) della tabella dei vettori di interrupt si trova la voce dell'interrupt 21h? (21h × 4)</p>
+      </div>
+
+      <div class="exercise" data-type="text" data-answers="mov dx,offset msg|lea dx,msg|lea dx,[msg]" data-solution="mov dx, offset msg" data-hint="Serve l'indirizzo di msg, non il suo contenuto: ricorda la parola offset." data-explain="mov dx, offset msg mette in DX l'indirizzo della stringa; il servizio 09h lo legge in DS:DX.">
+        <p class="q">Scrivi l'istruzione che carica in DX l'offset della variabile <code>msg</code>.</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="5" data-label="Byte =" data-hint="Conta i caratteri di Hi, poi 0Dh, 0Ah e il dollaro." data-explain="Hi sono 2 byte, 0Dh e 0Ah altri 2, il dollaro 1: in tutto 5 byte.">
+        <p class="q">Quanti byte occupa in memoria la variabile <code>msg db "Hi", 0Dh, 0Ah, "$"</code>?</p>
+      </div>
+
+      <div class="exercise" data-type="text" data-answers="mov dl,42h|mov dl,66|mov dl,'b'|mov dl,0x42|mov dl,042h" data-solution="mov dl, 42h" data-hint="Il servizio 02h prende il carattere in DL; il codice ASCII di 'B' è 42h." data-explain="'B' = 42h in ASCII. Poi si userebbero mov ah, 02h e int 21h per stamparlo.">
+        <p class="q">Scrivi l'istruzione che mette in DL il codice ASCII del carattere <code>'B'</code> (42h).</p>
+      </div>
+
+      <div class="exercise" data-type="seq" data-answers="ip,cs,flags|ipcsflags|ip cs flags" data-solution="IP, CS, FLAGS" data-placeholder="tre nomi separati da virgole" data-hint="int li salva nell'ordine FLAGS, CS, IP: iret li ripristina al contrario." data-explain="int salva FLAGS, CS, IP; iret li estrae in ordine inverso: prima IP, poi CS, infine FLAGS.">
+        <p class="q">L'istruzione <code>iret</code> ripristina dallo stack tre valori. Scrivili nell'ordine in cui vengono estratti (separati da virgole).</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

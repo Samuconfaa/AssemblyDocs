@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17202e">
+<title>6. Data stack e gestione dei dati · Assembly 8086</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="data-stack">
+<div id="layout">
+  <aside id="sidebar"></aside>
+  <main id="content">
+
+    <p class="kicker">Capitolo 6 di 8</p>
+    <h1>Data stack e gestione dei dati</h1>
+    <p class="lead">Dove vivono i dati di un programma? In questo capitolo vediamo il segmento dati, come si legge la memoria e come lo stack serve a portare dati dentro e fuori dai sottoprogrammi.</p>
+
+    <section id="teoria">
+      <h2>Teoria</h2>
+
+      <h3>Dove stanno i dati</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Posto</th><th>Vantaggi</th><th>Limiti</th><th>Esempio</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Registri</strong></td><td>velocissimi</td><td>pochissimi (pochi byte)</td><td><code>mov ax, 5</code></td></tr>
+            <tr><td><strong>Segmento dati</strong> (DS)</td><td>grande (fino a 64 KB), i dati restano finché il programma gira</td><td>più lento dei registri</td><td>le variabili</td></tr>
+            <tr><td><strong>Stack</strong> (SS:SP)</td><td>comodo per dati temporanei, parametri e variabili locali</td><td>lo spazio è limitato; i dati vanno tolti in ordine</td><td><code>push ax</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Il segmento dati e le variabili</h3>
+      <p>Nel segmento dati si dichiarano le <strong>variabili</strong>: aree di memoria con un nome (nel capitolo 7 vedremo tutti i tipi). Il nome è solo una comodità: l'assembler lo sostituisce con l'<strong>offset</strong> della variabile all'interno del segmento.</p>
+      <pre class="asm">.data
+numero  db 25            ; 1 byte, offset 0000h
+somma   dw 0             ; 1 word, offset 0001h
+msg     db "Ciao$"       ; 5 byte
+vett    db 3, 5, 7, 9    ; array di 4 byte</pre>
+
+      <h3>Modi di indirizzamento</h3>
+      <p>I <strong>modi di indirizzamento</strong> sono i diversi modi di indicare dove si trova un dato. Le <strong>parentesi quadre</strong> significano «il contenuto della memoria a questo indirizzo».</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Modo</th><th>Esempio</th><th>Significato</th></tr></thead>
+          <tbody>
+            <tr><td>Immediato</td><td><code>mov ax, 5</code></td><td>il dato è scritto nell'istruzione</td></tr>
+            <tr><td>Registro</td><td><code>mov ax, bx</code></td><td>il dato è in un registro</td></tr>
+            <tr><td>Diretto</td><td><code>mov ax, somma</code></td><td>il dato è in memoria alla variabile <code>somma</code></td></tr>
+            <tr><td>Indiretto con registro</td><td><code>mov al, [bx]</code></td><td>in BX c'è l'<em>offset</em> del dato: si legge il byte a DS:BX</td></tr>
+            <tr><td>Con spiazzamento</td><td><code>mov al, [bx+2]</code></td><td>si legge a DS:(BX+2)</td></tr>
+            <tr><td>Base + indice</td><td><code>mov al, [bx+si]</code></td><td>si legge a DS:(BX+SI), utile per gli array</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Per scorrere un array si mette in un registro l'indirizzo e lo si fa avanzare. Per ottenere l'indirizzo di una variabile si usa <code>offset</code> (oppure <code>lea</code>):</p>
+      <pre class="asm">mov bx, offset vett   ; BX = indirizzo di vett (non il suo contenuto!)
+mov al, [bx]          ; AL = 3   (primo elemento)
+inc bx
+mov al, [bx]          ; AL = 5   (secondo elemento)</pre>
+      <div class="box attenzione">
+        <span class="box-title">Indirizzo oppure contenuto?</span>
+        <p><code>mov bx, offset vett</code> carica in BX l'<strong>indirizzo</strong> della variabile; <code>mov al, [bx]</code> legge il <strong>contenuto</strong> a quell'indirizzo. Confonderli è l'errore più frequente.</p>
+      </div>
+      <h3>Quale segmento viene usato?</h3>
+      <p>Il registro di segmento viene scelto in automatico:</p>
+      <ul>
+        <li>con <code>[bx]</code>, <code>[si]</code>, <code>[di]</code> e con i nomi delle variabili si usa <strong>DS</strong> (il segmento dati);</li>
+        <li>con <code>[bp]</code> e con SP si usa <strong>SS</strong> (il segmento dello stack).</li>
+      </ul>
+      <p>Esempio: se <code>DS = 1000h</code> e <code>BX = 0010h</code>, <code>mov al, [bx]</code> legge dall'indirizzo fisico <code>10000h + 0010h = 10010h</code>.</p>
+      <div class="box nota">
+        <span class="box-title">Memoria verso memoria</span>
+        <p>Non esiste <code>mov</code> da memoria a memoria: per copiare un dato da una variabile all'altra si passa da un registro (<code>mov al, a</code> poi <code>mov b, al</code>).</p>
+      </div>
+
+      <h3>Lo stack per portare dati ai sottoprogrammi</h3>
+      <p>Un <strong>sottoprogramma</strong> (procedura) è un pezzo di codice che si richiama più volte con <code>call</code>. Per eseguirlo e poi tornare al punto giusto:</p>
+      <ul>
+        <li><code>call etichetta</code> salva sullo stack l'<strong>indirizzo di ritorno</strong> (il valore di IP dell'istruzione successiva) e salta alla procedura;</li>
+        <li><code>ret</code> estrae dallo stack quell'indirizzo e torna al chiamante.</li>
+      </ul>
+      <p>Lo stack serve anche per passare i <strong>parametri</strong>: il chiamante li mette sulla pila con <code>push</code>, la procedura li legge usando il registro <code>BP</code>.</p>
+      <pre class="asm">    mov ax, 5
+    push ax              ; primo parametro
+    mov ax, 3
+    push ax              ; secondo parametro
+    call somma           ; salva IP sullo stack e salta
+    add sp, 4            ; toglie i 2 parametri dallo stack
+    ; qui AX = 8
+
+somma proc
+    push bp              ; salva il vecchio BP
+    mov bp, sp           ; BP punta alla cima dello stack
+    mov ax, [bp+4]       ; secondo parametro (3)
+    add ax, [bp+6]       ; + primo parametro (5)
+    pop bp               ; ripristina BP
+    ret                  ; torna indietro, risultato in AX
+somma endp</pre>
+      <p>Questo è lo stack dentro la procedura, dopo <code>push bp</code> e <code>mov bp, sp</code> (gli indirizzi più bassi sono in basso, perché lo stack cresce verso il basso):</p>
+      <div class="table-wrap">
+        <table class="center">
+          <thead><tr><th>Posizione</th><th>Contenuto</th></tr></thead>
+          <tbody>
+            <tr><td><code>[bp+6]</code></td><td>primo parametro (5)</td></tr>
+            <tr><td><code>[bp+4]</code></td><td>secondo parametro (3)</td></tr>
+            <tr><td><code>[bp+2]</code></td><td>indirizzo di ritorno (IP salvato da call)</td></tr>
+            <tr><td><code>[bp]</code> ← SP e BP</td><td>vecchio valore di BP</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Perché <code>add sp, 4</code>? I due parametri sono stati messi dal chiamante (2 push × 2 byte = 4 byte): a lavoro finito vanno tolti, altrimenti lo stack resterebbe «sporco».</p>
+
+      <h3>Salvare i registri in una procedura</h3>
+      <p>Una procedura che usa dei registri dovrebbe lasciarli come li ha trovati, salvandoli all'inizio e ripristinandoli alla fine in ordine inverso:</p>
+      <pre class="asm">calcola proc
+    push cx
+    push dx
+    ; ... qui si usano liberamente CX e DX ...
+    pop dx
+    pop cx
+    ret
+calcola endp</pre>
+
+      <div class="box breve">
+        <span class="box-title">In breve</span>
+        <ul>
+          <li>I dati stanno in registri, nel segmento dati (variabili) e nello stack (dati temporanei).</li>
+          <li>Le parentesi quadre indicano il contenuto della memoria; <code>offset</code> dà l'indirizzo.</li>
+          <li><code>[bx]</code> usa DS, <code>[bp]</code> usa SS.</li>
+          <li><code>call</code> salva IP sullo stack, <code>ret</code> lo ripristina; i parametri si passano con push e si leggono con BP.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="domande" class="practice">
+      <h2>Domande</h2>
+
+      <div class="quiz" data-answer="b" data-explain="Con BX, SI, DI e con i nomi delle variabili la CPU usa DS, il segmento dei dati.">
+        <p class="q">Quale registro di segmento viene usato di default con <code>[bx]</code>?</p>
+        <label><input type="radio" value="a"> SS</label>
+        <label><input type="radio" value="b"> DS</label>
+        <label><input type="radio" value="c"> CS</label>
+        <label><input type="radio" value="d"> ES</label>
+      </div>
+
+      <div class="quiz" data-answer="c" data-explain="BP è legato allo stack: con [bp] la CPU usa il segmento SS.">
+        <p class="q">Quale registro di segmento viene usato di default con <code>[bp]</code>?</p>
+        <label><input type="radio" value="a"> DS</label>
+        <label><input type="radio" value="b"> CS</label>
+        <label><input type="radio" value="c"> SS</label>
+        <label><input type="radio" value="d"> ES</label>
+      </div>
+
+      <div class="quiz" data-answer="c" data-explain="offset dà l'indirizzo della variabile; le parentesi quadre (o il solo nome) leggono il contenuto.">
+        <p class="q">Che differenza c'è tra <code>mov bx, offset var</code> e <code>mov bx, [var]</code>?</p>
+        <label><input type="radio" value="a"> Nessuna differenza</label>
+        <label><input type="radio" value="b"> offset carica il contenuto, le quadre l'indirizzo</label>
+        <label><input type="radio" value="c"> offset carica l'indirizzo di var, le quadre il suo contenuto</label>
+        <label><input type="radio" value="d"> La seconda è un errore</label>
+      </div>
+
+      <div class="quiz" data-answer="a" data-explain="call salva sullo stack l'indirizzo dell'istruzione successiva (IP) per sapere dove tornare con ret.">
+        <p class="q">Che cosa salva <code>call</code> sullo stack?</p>
+        <label><input type="radio" value="a"> L'indirizzo dell'istruzione successiva (IP)</label>
+        <label><input type="radio" value="b"> I parametri della procedura</label>
+        <label><input type="radio" value="c"> Tutti i registri</label>
+        <label><input type="radio" value="d"> Il valore di AX</label>
+      </div>
+
+      <div class="quiz" data-answer="b" data-explain="Con push bp e mov bp, sp: in [bp] c'è il vecchio BP, in [bp+2] l'indirizzo di ritorno, da [bp+4] in poi i parametri.">
+        <p class="q">Dopo <code>push bp</code> e <code>mov bp, sp</code> dentro la procedura, dove si trova l'indirizzo di ritorno?</p>
+        <label><input type="radio" value="a"> <code>[bp]</code></label>
+        <label><input type="radio" value="b"> <code>[bp+2]</code></label>
+        <label><input type="radio" value="c"> <code>[bp+4]</code></label>
+        <label><input type="radio" value="d"> <code>[bp-2]</code></label>
+      </div>
+
+      <div class="quiz" data-answer="a" data-explain="Il chiamante ha messo i parametri con push: finita la procedura vanno rimossi, spostando SP in avanti di tanti byte quanti ne ha messi.">
+        <p class="q">A cosa serve <code>add sp, 4</code> dopo la <code>call</code> (con due parametri da una word)?</p>
+        <label><input type="radio" value="a"> A togliere i due parametri dallo stack</label>
+        <label><input type="radio" value="b"> A far funzionare <code>ret</code></label>
+        <label><input type="radio" value="c"> A salvare IP</label>
+        <label><input type="radio" value="d"> A azzerare BP</label>
+      </div>
+    </section>
+
+    <section id="esercizi" class="practice">
+      <h2>Esercizi</h2>
+
+      <div class="exercise" data-type="num" data-answers="10010" data-label="Fisico =" data-hint="Indirizzo fisico = DS × 16 + BX = 10000h + 0010h." data-explain="DS × 16 = 10000h; 10000h + 0010h = 10010h.">
+        <p class="q">Con <code>DS = 1000h</code> e <code>BX = 0010h</code>, qual è l'indirizzo fisico letto da <code>mov al, [bx]</code>? (5 cifre esadecimali)</p>
+      </div>
+
+      <div class="exercise" data-type="text" data-answers="mov al,[bx]|mov al,byte ptr [bx]|mov al,ds:[bx]|mov al,[ds:bx]" data-solution="mov al, [bx]" data-hint="La destinazione è AL (8 bit) e la sorgente è la memoria all'indirizzo contenuto in BX." data-explain="mov al, [bx] legge il byte a DS:BX e lo copia in AL.">
+        <p class="q">Scrivi l'istruzione che copia in AL il byte che si trova in memoria all'indirizzo contenuto in BX.</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="1234" data-label="AX =" data-hint="Little endian: il byte all'indirizzo più basso è la parte bassa (AL); quello all'indirizzo più alto è la parte alta (AH)." data-explain="AL riceve 34h (indirizzo 0010h) e AH riceve 12h (indirizzo 0011h): AX = 1234h.">
+        <p class="q">In memoria, in <code>DS:0010h</code> c'è il byte <code>34h</code> e in <code>DS:0011h</code> il byte <code>12h</code>. Dopo <code>mov ax, [0010h]</code> quanto vale AX? (esadecimale)</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="00FC" data-label="SP =" data-hint="call fa SP − 2 (salva IP) e push bp fa un altro SP − 2." data-explain="0100h → 00FEh dopo call (IP salvato) → 00FCh dopo push bp.">
+        <p class="q">Prima di una <code>call</code> si ha <code>SP = 0100h</code>. Quanto vale SP dopo la <code>call</code> e il successivo <code>push bp</code>? (esadecimale)</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="6" data-label="[bp+" data-placeholder="un numero" data-hint="L'ultimo parametro pushato è più vicino a BP; il primo è più lontano." data-explain="Dall'alto: [bp+6] = primo parametro, [bp+4] = secondo, [bp+2] = indirizzo di ritorno, [bp] = vecchio BP.">
+        <p class="q">Dopo <code>push</code> del primo parametro (5), <code>push</code> del secondo (3), <code>call</code> e poi <code>push bp</code> / <code>mov bp, sp</code>: a quale offset da BP si trova il <strong>primo</strong> parametro (5)? Scrivi solo il numero (in <code>[bp+?]</code>).</p>
+      </div>
+
+      <div class="exercise" data-type="text" data-answers="mov bx,offset vett|lea bx,vett|lea bx,[vett]" data-solution="mov bx, offset vett" data-hint="Per ottenere l'indirizzo (non il contenuto) serve la parola offset, oppure l'istruzione lea." data-explain="mov bx, offset vett carica in BX l'indirizzo di vett (lea bx, vett è equivalente).">
+        <p class="q">Scrivi l'istruzione che carica in BX l'indirizzo (l'offset) della variabile <code>vett</code>.</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="7" data-label="AL =" data-hint="vett contiene 3, 5, 7, 9. BX parte dal primo elemento: quanti inc ci sono?" data-explain="BX parte dal primo elemento (3); due inc lo portano al terzo, che vale 7.">
+        <p class="q">Se <code>vett db 3, 5, 7, 9</code>, quanto vale AL alla fine? (decimale)</p>
+        <pre class="asm">mov bx, offset vett
+inc bx
+inc bx
+mov al, [bx]</pre>
+      </div>
+    </section>
+
+    <section id="prova">
+      <h2>Prova tu</h2>
+      <p>Il simulatore non gestisce la memoria né <code>call</code>, ma puoi vedere come i parametri passano dallo stack: qui li mettiamo con <code>push</code> e li riprendiamo con <code>pop</code> in ordine inverso, proprio come farebbe una procedura.</p>
+      <div class="sim"><textarea>mov ax, 5
+push ax           ; primo parametro
+mov ax, 3
+push ax           ; secondo parametro
+; (qui ci sarebbe la call, che salva anche IP)
+pop bx            ; BX = 3 (ultimo inserito)
+pop cx            ; CX = 5
+add bx, cx        ; BX = 8: il risultato della procedura</textarea></div>
+    </section>
+
+  </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
