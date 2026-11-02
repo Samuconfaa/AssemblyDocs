@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17202e">
+<title>1. I registri general purpose · Assembly 8086</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="registri">
+<div id="layout">
+  <aside id="sidebar"></aside>
+  <main id="content">
+
+    <p class="kicker">Capitolo 1 di 8</p>
+    <h1>I registri general purpose</h1>
+    <p class="lead">I registri sono le «tasche» della CPU: piccolissime memorie dentro il processore, velocissime, dove il programma tiene i numeri su cui sta lavorando.</p>
+
+    <section id="teoria">
+      <h2>Teoria</h2>
+
+      <h3>Perché servono i registri</h3>
+      <p>La RAM è grande ma, rispetto alla CPU, lenta. Per questo il processore non lavora direttamente sulla memoria: porta i dati nei registri, esegue l'operazione e poi (se serve) rimette il risultato in memoria. Un registro dell'8086 contiene <strong>16 bit</strong> (due byte).</p>
+
+      <h3>I quattro registri a uso generale</h3>
+      <p>I registri <em>general purpose</em> («a uso generale») si possono usare per qualunque dato. Nell'8086 sono quattro: <strong>AX, BX, CX, DX</strong>. Ognuno ha un nome che ricorda il suo uso tipico:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Registro</th><th>Nome</th><th>Uso tipico</th><th>Parte alta</th><th>Parte bassa</th></tr></thead>
+          <tbody>
+            <tr><td><strong>AX</strong></td><td>Accumulator</td><td>Risultato delle operazioni aritmetiche, moltiplicazioni e divisioni, ingresso/uscita</td><td>AH</td><td>AL</td></tr>
+            <tr><td><strong>BX</strong></td><td>Base</td><td>Contiene indirizzi (puntatori) per accedere alla memoria</td><td>BH</td><td>BL</td></tr>
+            <tr><td><strong>CX</strong></td><td>Counter</td><td>Contatore nei cicli e nelle ripetizioni</td><td>CH</td><td>CL</td></tr>
+            <tr><td><strong>DX</strong></td><td>Data</td><td>Dati aggiuntivi, parte alta di moltiplicazioni e resto delle divisioni</td><td>DH</td><td>DL</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Questi sono usi <em>consigliati</em>, non obbligatori: puoi mettere un numero qualunque in qualunque registro. Alcune istruzioni (come <code>mul</code> e <code>div</code>) però lavorano per forza su AX e DX.</p>
+
+      <h3>Parte alta e parte bassa</h3>
+      <p>Ogni registro a 16 bit si può usare anche come <strong>due registri da 8 bit</strong>: la metà alta (la lettera H, <em>high</em>) e la metà bassa (la lettera L, <em>low</em>).</p>
+      <div class="regrow"><span class="rname">AX</span><span class="part hi">AH<small>bit 15 – 8</small></span><span class="part lo">AL<small>bit 7 – 0</small></span></div>
+      <div class="regrow"><span class="rname">BX</span><span class="part hi">BH<small>bit 15 – 8</small></span><span class="part lo">BL<small>bit 7 – 0</small></span></div>
+      <div class="regrow"><span class="rname">CX</span><span class="part hi">CH<small>bit 15 – 8</small></span><span class="part lo">CL<small>bit 7 – 0</small></span></div>
+      <div class="regrow"><span class="rname">DX</span><span class="part hi">DH<small>bit 15 – 8</small></span><span class="part lo">DL<small>bit 7 – 0</small></span></div>
+
+      <div class="box esempio">
+        <span class="box-title">Esempio</span>
+        <p>Se <code>AX = 1234h</code> allora <code>AH = 12h</code> e <code>AL = 34h</code>. Se scrivi in AL il valore <code>0FFh</code>, AX diventa <code>12FFh</code>: la parte alta non cambia. Le due metà sono <em>lo stesso registro</em> visto in due modi.</p>
+      </div>
+
+      <h3>Gli altri registri (cenni)</h3>
+      <p>Esistono altri quattro registri a 16 bit che si possono usare nei calcoli, ma hanno un ruolo speciale e <strong>non hanno</strong> parte alta e parte bassa:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Registro</th><th>Nome</th><th>A cosa serve</th></tr></thead>
+          <tbody>
+            <tr><td><strong>SP</strong></td><td>Stack Pointer</td><td>Indica la cima dello stack (capitolo 4)</td></tr>
+            <tr><td><strong>BP</strong></td><td>Base Pointer</td><td>Punta a una zona dello stack, per leggere parametri e variabili locali (capitolo 6)</td></tr>
+            <tr><td><strong>SI</strong></td><td>Source Index</td><td>Indice di partenza per scorrere array e stringhe</td></tr>
+            <tr><td><strong>DI</strong></td><td>Destination Index</td><td>Indice di arrivo per scorrere array e stringhe</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Poi ci sono i <strong>registri di segmento</strong> (CS, DS, SS, ES, capitolo 5), il <strong>puntatore all'istruzione</strong> IP e il registro dei <strong>flag</strong> (capitolo 2).</p>
+      <div class="box nota">
+        <span class="box-title">Nei processori più moderni</span>
+        <p>Dal 386 in poi i registri sono a 32 bit e hanno la lettera E davanti: <code>EAX</code>, <code>EBX</code>... AX diventa la metà bassa di EAX. Il ragionamento resta identico.</p>
+      </div>
+
+      <h3>L'istruzione MOV</h3>
+      <p><code>mov destinazione, sorgente</code> <strong>copia</strong> il valore della sorgente nella destinazione. La sorgente non cambia. È l'istruzione più usata in assoluto.</p>
+      <pre class="asm">mov ax, 5        ; AX = 5            (numero immediato)
+mov bx, ax       ; BX = AX           (da registro a registro)
+mov al, 0FFh     ; AL = FFh          (registro a 8 bit)
+mov ch, 10       ; CH = 10           (parte alta di CX)</pre>
+
+      <div class="box attenzione">
+        <span class="box-title">Errori classici con MOV</span>
+        <ul>
+          <li><code>mov ax, bl</code> è <strong>sbagliato</strong>: AX è a 16 bit, BL a 8 bit. Gli operandi devono avere la stessa dimensione.</li>
+          <li><code>mov 5, ax</code> è sbagliato: la destinazione non può essere un numero.</li>
+          <li><code>mov al, 300</code> è sbagliato: 300 non entra in 8 bit (massimo 255).</li>
+          <li>Non si può copiare da memoria a memoria con una sola <code>mov</code>: si passa da un registro (capitolo 6).</li>
+        </ul>
+      </div>
+
+      <h3>Scambiare due registri: XCHG</h3>
+      <pre class="asm">mov ax, 1
+mov bx, 2
+xchg ax, bx      ; ora AX = 2 e BX = 1</pre>
+
+      <h3>Come si scrivono i numeri</h3>
+      <p>Decimale: <code>10</code>. Esadecimale: <code>0Ah</code> (suffisso <code>h</code>; se inizia con una lettera serve lo zero davanti). Binario: <code>1010b</code>. Sono tre modi di scrivere lo <em>stesso</em> numero: <code>mov ax, 10</code>, <code>mov ax, 0Ah</code> e <code>mov ax, 1010b</code> fanno la stessa cosa.</p>
+
+      <div class="box breve">
+        <span class="box-title">In breve</span>
+        <ul>
+          <li>I registri general purpose sono AX, BX, CX, DX, a 16 bit.</li>
+          <li>Ciascuno si divide in una parte alta (AH, BH, CH, DH) e una bassa (AL, BL, CL, DL) da 8 bit.</li>
+          <li><code>mov dest, src</code> copia; i due operandi devono avere la stessa dimensione.</li>
+          <li>SP, BP, SI, DI sono registri a 16 bit con ruoli speciali.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="domande" class="practice">
+      <h2>Domande</h2>
+
+      <div class="quiz" data-answer="b" data-explain="AX è a 16 bit: è formato da AH e AL, ciascuno da 8 bit.">
+        <p class="q">Quanti bit contiene il registro AX dell'8086?</p>
+        <label><input type="radio" value="a"> 8 bit</label>
+        <label><input type="radio" value="b"> 16 bit</label>
+        <label><input type="radio" value="c"> 32 bit</label>
+        <label><input type="radio" value="d"> 64 bit</label>
+      </div>
+
+      <div class="quiz" data-answer="c" data-explain="BL (B-low) è la metà bassa di BX; BH è la metà alta.">
+        <p class="q">Quale registro è la parte bassa di BX?</p>
+        <label><input type="radio" value="a"> BX</label>
+        <label><input type="radio" value="b"> BP</label>
+        <label><input type="radio" value="c"> BL</label>
+        <label><input type="radio" value="d"> BH</label>
+      </div>
+
+      <div class="quiz" data-answer="d" data-explain="AX = 5A3Fh: le prime due cifre esadecimali (5A) sono la parte alta AH, le ultime due (3F) sono la parte bassa AL.">
+        <p class="q">Se <code>AX = 5A3Fh</code>, quanto vale AH?</p>
+        <label><input type="radio" value="a"> 3Fh</label>
+        <label><input type="radio" value="b"> 0A3h</label>
+        <label><input type="radio" value="c"> 5A3h</label>
+        <label><input type="radio" value="d"> 5Ah</label>
+      </div>
+
+      <div class="quiz" data-answer="c" data-explain="AL è a 8 bit e BX è a 16 bit: le dimensioni non coincidono, quindi l'istruzione è sbagliata.">
+        <p class="q">Quale di queste istruzioni NON è valida?</p>
+        <label><input type="radio" value="a"> <code>mov ax, 10</code></label>
+        <label><input type="radio" value="b"> <code>mov bx, ax</code></label>
+        <label><input type="radio" value="c"> <code>mov al, bx</code></label>
+        <label><input type="radio" value="d"> <code>mov ch, 0FFh</code></label>
+      </div>
+
+      <div class="quiz" data-answer="b" data-explain="CX significa Counter: si usa tipicamente per contare le ripetizioni di un ciclo.">
+        <p class="q">Per quale scopo viene usato tipicamente CX?</p>
+        <label><input type="radio" value="a"> Puntare alla cima dello stack</label>
+        <label><input type="radio" value="b"> Contare le iterazioni di un ciclo</label>
+        <label><input type="radio" value="c"> Indicare il segmento dei dati</label>
+        <label><input type="radio" value="d"> Contenere l'indirizzo della prossima istruzione</label>
+      </div>
+    </section>
+
+    <section id="esercizi" class="practice">
+      <h2>Esercizi</h2>
+
+      <div class="exercise" data-type="num" data-answers="F5" data-label="AL =" data-hint="AL è il byte meno significativo: le ultime due cifre esadecimali di AX." data-explain="AX = A3F5h, quindi AH = A3h e AL = F5h.">
+        <p class="q">Se <code>AX = 0A3F5h</code>, quanto vale AL? (in esadecimale)</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="0207" data-label="AX =" data-hint="AH = 02h è la parte alta, AL = 07h la parte bassa: scrivi prima AH e poi AL." data-explain="mov ax,0 azzera tutto; AL diventa 07h e AH diventa 02h, quindi AX = 0207h.">
+        <p class="q">Cosa contiene AX alla fine del codice? (esadecimale, 4 cifre)</p>
+        <pre class="asm">mov ax, 0
+mov al, 7
+mov ah, 2</pre>
+      </div>
+
+      <div class="exercise" data-type="text" data-answers="mov cx,10|mov cx,0ah|mov cx,0x0a|mov cx,10d|mov cx,00ah|mov cx,1010b" data-solution="mov cx, 10" data-hint="La forma è: mov destinazione, sorgente." data-explain="La destinazione (CX) viene per prima, il numero 10 è la sorgente.">
+        <p class="q">Scrivi l'istruzione che mette il numero 10 (decimale) nel registro CX.</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="5" data-label="BX =" data-hint="mov copia, non sposta: BX prende il valore che AX aveva in quel momento." data-explain="BX riceve 5 quando AX vale 5. Il successivo mov ax, 9 cambia solo AX.">
+        <p class="q">Quanto vale BX alla fine? (decimale)</p>
+        <pre class="asm">mov ax, 5
+mov bx, ax
+mov ax, 9</pre>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="2" data-label="CX =" data-hint="Dopo xchg i valori di AX e BX sono scambiati." data-explain="Dopo xchg AX vale 2 e BX vale 1; mov cx, ax copia 2 in CX.">
+        <p class="q">Quanto vale CX alla fine? (decimale)</p>
+        <pre class="asm">mov ax, 1
+mov bx, 2
+xchg ax, bx
+mov cx, ax</pre>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="0A0B" data-label="BX =" data-hint="BH è la parte alta (le prime due cifre), BL la parte bassa." data-explain="BH = 0Ah e BL = 0Bh formano insieme BX = 0A0Bh.">
+        <p class="q">Cosa contiene BX alla fine? (esadecimale, 4 cifre)</p>
+        <pre class="asm">mov bh, 0Ah
+mov bl, 0Bh</pre>
+      </div>
+    </section>
+
+    <section id="prova">
+      <h2>Prova tu</h2>
+      <p>Questo mini-simulatore esegue le istruzioni riga per riga e mostra i registri. Modifica il programma, premi «Esegui» e controlla se il risultato è quello che ti aspettavi. Funzionano <code>mov</code> e <code>xchg</code> (e quelle dei prossimi capitoli); la memoria non è simulata.</p>
+      <div class="sim"><textarea>mov ax, 1234h
+mov bx, ax        ; BX = AX
+mov al, 0FFh      ; cambia solo la parte bassa di AX
+xchg ax, bx       ; scambia AX e BX
+mov ch, 10
+mov cl, 3</textarea></div>
+      <p>Cose da provare: cosa succede se scrivi <code>mov al, bx</code>? E <code>mov al, 300</code>?</p>
+    </section>
+
+  </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

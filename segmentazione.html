@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17202e">
+<title>5. La segmentazione · Assembly 8086</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="segmentazione">
+<div id="layout">
+  <aside id="sidebar"></aside>
+  <main id="content">
+
+    <p class="kicker">Capitolo 5 di 8</p>
+    <h1>La segmentazione</h1>
+    <p class="lead">I registri dell'8086 hanno 16 bit, ma la memoria è molto più grande. Come si fa a raggiungerla tutta? Con i segmenti.</p>
+
+    <section id="teoria">
+      <h2>Teoria</h2>
+
+      <h3>Il problema</h3>
+      <p>L'8086 ha un bus indirizzi a <strong>20 bit</strong>, quindi può indirizzare 2<sup>20</sup> = 1.048.576 byte = <strong>1 MB</strong> di memoria. Ma i suoi registri sono a <strong>16 bit</strong>, e con 16 bit si contano solo 2<sup>16</sup> = 65.536 byte = <strong>64 KB</strong>.</p>
+      <p>Come si fa a indirizzare 1 MB con registri da 64 KB? Si divide la memoria in <strong>segmenti</strong> da 64 KB e si indica ogni byte con due numeri a 16 bit: il <em>segmento</em> e la posizione dentro il segmento.</p>
+
+      <h3>Indirizzo logico e indirizzo fisico</h3>
+      <p>Un indirizzo si scrive <code>segmento:offset</code> (per esempio <code>1234h:0010h</code>) e si chiama <strong>indirizzo logico</strong>. L'<strong>indirizzo fisico</strong> è il numero a 20 bit che arriva davvero alla memoria e si calcola così:</p>
+      <div class="box teoria">
+        <span class="box-title">Formula</span>
+        <p><strong>indirizzo fisico = segmento × 16 + offset</strong></p>
+        <p>Moltiplicare per 16 in esadecimale significa aggiungere uno zero a destra (uno spostamento di 4 bit).</p>
+      </div>
+      <div class="box esempio">
+        <span class="box-title">Esempio: 1234h:0010h</span>
+        <p>Segmento × 16: <code>1234h</code> → <code>12340h</code><br>
+           Più l'offset: <code>12340h + 0010h = 12350h</code><br>
+           Indirizzo fisico: <code>12350h</code></p>
+      </div>
+
+      <h3>Calcolatore</h3>
+      <p>Prova con numeri tuoi (esadecimale, fino a 4 cifre):</p>
+      <div id="seg-calc" class="calc">
+        <label>Segmento (hex)<input id="calc-seg" value="1234" maxlength="6" autocomplete="off"></label>
+        <label>Offset (hex)<input id="calc-off" value="0010" maxlength="6" autocomplete="off"></label>
+        <div id="calc-out" class="calc-out"></div>
+      </div>
+
+      <h3>I quattro registri di segmento</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Registro</th><th>Nome</th><th>Punta a...</th><th>Si usa con</th></tr></thead>
+          <tbody>
+            <tr><td><strong>CS</strong></td><td>Code Segment</td><td>il segmento del <em>codice</em> (le istruzioni)</td><td>IP</td></tr>
+            <tr><td><strong>DS</strong></td><td>Data Segment</td><td>il segmento dei <em>dati</em> (le variabili)</td><td>BX, SI, DI, indirizzi diretti</td></tr>
+            <tr><td><strong>SS</strong></td><td>Stack Segment</td><td>il segmento dello <em>stack</em></td><td>SP, BP</td></tr>
+            <tr><td><strong>ES</strong></td><td>Extra Segment</td><td>un segmento extra, per dati aggiuntivi o copie di stringhe</td><td>DI</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Quando il programma legge un dato, la CPU usa <em>automaticamente</em> il registro di segmento giusto: <code>CS:IP</code> per prendere le istruzioni, <code>SS:SP</code> per lo stack, <code>DS:offset</code> per le variabili.</p>
+
+      <h3>Segmenti che si sovrappongono</h3>
+      <p>Un segmento può iniziare ogni 16 byte (cioè a ogni valore del registro di segmento), mentre è lungo 64 KB. Quindi i segmenti <strong>si sovrappongono</strong>, e lo stesso byte fisico si può scrivere con indirizzi logici diversi:</p>
+      <div class="table-wrap">
+        <table class="center">
+          <thead><tr><th>Indirizzo logico</th><th>Calcolo</th><th>Indirizzo fisico</th></tr></thead>
+          <tbody>
+            <tr><td>1000h:0020h</td><td>10000h + 0020h</td><td>10020h</td></tr>
+            <tr><td>1002h:0000h</td><td>10020h + 0000h</td><td>10020h</td></tr>
+            <tr><td>0FFEh:0040h</td><td>0FFE0h + 0040h</td><td>10020h</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Tre indirizzi logici diversi, un solo indirizzo fisico: è normale nella segmentazione dell'8086.</p>
+
+      <h3>Segmenti in un programma</h3>
+      <p>In un programma assembly il codice, i dati e lo stack stanno in segmenti diversi, dichiarati con le direttive <code>.code</code>, <code>.data</code>, <code>.stack</code>. Il caricatore del sistema operativo prepara CS e SS, ma <strong>DS non è pronto</strong>: all'inizio del programma bisogna impostarlo a mano.</p>
+      <pre class="asm">.data
+numero  db 25
+
+.code
+main proc
+    mov ax, @data    ; @data = numero di segmento dei dati
+    mov ds, ax       ; DS punta ora al segmento dati
+    ; ... da qui si possono usare le variabili ...</pre>
+      <p>Si passa per AX perché in un registro di segmento <strong>non si può scrivere direttamente un numero</strong>: <code>mov ds, 1234h</code> è sbagliato.</p>
+
+      <h3>Vantaggi e limiti</h3>
+      <ul>
+        <li><strong>Vantaggi:</strong> si raggiunge 1 MB con registri da 16 bit; codice, dati e stack sono separati; un programma si può spostare in memoria cambiando solo i registri di segmento.</li>
+        <li><strong>Limiti:</strong> ogni segmento è al massimo di 64 KB; i doppi indirizzi creano confusione; bisogna ricordarsi di inizializzare DS.</li>
+      </ul>
+      <div class="box nota">
+        <span class="box-title">Oggi</span>
+        <p>Questo schema («modalità reale») è quello dell'8086 e dei vecchi programmi DOS. I sistemi operativi moderni usano un modello di memoria diverso (memoria virtuale a pagine), ma l'idea di dividere la memoria in zone separate per codice, dati e stack è rimasta.</p>
+      </div>
+
+      <div class="box breve">
+        <span class="box-title">In breve</span>
+        <ul>
+          <li>L'8086 indirizza 1 MB con registri da 16 bit grazie ai segmenti da 64 KB.</li>
+          <li>Indirizzo fisico = segmento × 16 + offset (20 bit).</li>
+          <li>CS = codice, DS = dati, SS = stack, ES = extra.</li>
+          <li>All'inizio di un programma si imposta DS tramite AX.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="domande" class="practice">
+      <h2>Domande</h2>
+
+      <div class="quiz" data-answer="c" data-explain="Il bus indirizzi è a 20 bit: 2^20 byte = 1 MB.">
+        <p class="q">Quanta memoria può indirizzare l'8086?</p>
+        <label><input type="radio" value="a"> 64 KB</label>
+        <label><input type="radio" value="b"> 640 KB</label>
+        <label><input type="radio" value="c"> 1 MB</label>
+        <label><input type="radio" value="d"> 4 GB</label>
+      </div>
+
+      <div class="quiz" data-answer="d" data-explain="Un offset è a 16 bit, quindi può spostarsi al massimo di 65.536 byte = 64 KB dentro il segmento.">
+        <p class="q">Quanto è grande al massimo un segmento?</p>
+        <label><input type="radio" value="a"> 256 byte</label>
+        <label><input type="radio" value="b"> 16 KB</label>
+        <label><input type="radio" value="c"> 1 MB</label>
+        <label><input type="radio" value="d"> 64 KB</label>
+      </div>
+
+      <div class="quiz" data-answer="b" data-explain="Il segmento viene moltiplicato per 16 (spostato di 4 bit) e poi si somma l'offset.">
+        <p class="q">Qual è la formula dell'indirizzo fisico?</p>
+        <label><input type="radio" value="a"> segmento + offset</label>
+        <label><input type="radio" value="b"> segmento × 16 + offset</label>
+        <label><input type="radio" value="c"> segmento × 10 + offset</label>
+        <label><input type="radio" value="d"> segmento × offset</label>
+      </div>
+
+      <div class="quiz" data-answer="c" data-explain="DS (Data Segment) contiene il segmento che raccoglie i dati e le variabili del programma.">
+        <p class="q">Quale registro contiene il segmento dei dati?</p>
+        <label><input type="radio" value="a"> CS</label>
+        <label><input type="radio" value="b"> SS</label>
+        <label><input type="radio" value="c"> DS</label>
+        <label><input type="radio" value="d"> ES</label>
+      </div>
+
+      <div class="quiz" data-answer="b" data-explain="I segmenti possono iniziare ogni 16 byte e sono lunghi 64 KB, quindi si sovrappongono: più coppie segmento:offset danno lo stesso indirizzo fisico.">
+        <p class="q">Due indirizzi logici diversi possono corrispondere allo stesso indirizzo fisico?</p>
+        <label><input type="radio" value="a"> No, mai</label>
+        <label><input type="radio" value="b"> Sì, perché i segmenti si sovrappongono</label>
+        <label><input type="radio" value="c"> Sì, ma solo per lo stack</label>
+        <label><input type="radio" value="d"> Sì, ma solo usando ES</label>
+      </div>
+
+      <div class="quiz" data-answer="a" data-explain="Il loader non imposta DS per i nostri dati: lo facciamo noi con mov ax, @data e mov ds, ax.">
+        <p class="q">Perché all'inizio del programma si scrive <code>mov ax, @data</code> e <code>mov ds, ax</code>?</p>
+        <label><input type="radio" value="a"> Per far puntare DS al segmento dei dati</label>
+        <label><input type="radio" value="b"> Per azzerare il registro AX</label>
+        <label><input type="radio" value="c"> Per inizializzare lo stack</label>
+        <label><input type="radio" value="d"> Per dire al DOS quanto è grande il programma</label>
+      </div>
+    </section>
+
+    <section id="esercizi" class="practice">
+      <h2>Esercizi</h2>
+      <p>Per i calcoli puoi usare il calcolatore della teoria, ma prova prima a ragionare a mente.</p>
+
+      <div class="exercise" data-type="num" data-answers="20005" data-label="Fisico =" data-hint="Aggiungi uno zero al segmento (20000h) e somma l'offset." data-explain="2000h × 16 = 20000h; 20000h + 0005h = 20005h.">
+        <p class="q">Calcola l'indirizzo fisico di <code>2000h:0005h</code> (5 cifre esadecimali).</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="0A100" data-label="Fisico =" data-hint="0A00h con uno zero in più diventa 0A000h." data-explain="0A00h × 16 = 0A000h; 0A000h + 0100h = 0A100h.">
+        <p class="q">Calcola l'indirizzo fisico di <code>0A00h:0100h</code> (5 cifre esadecimali).</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="12345" data-label="Fisico =" data-hint="1000h × 16 = 10000h." data-explain="10000h + 2345h = 12345h.">
+        <p class="q">Calcola l'indirizzo fisico di <code>1000h:2345h</code> (5 cifre esadecimali).</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="07C00" data-label="Fisico =" data-hint="07C0h con uno zero in più è 07C00h." data-explain="07C0h × 16 = 07C00h: è il famoso indirizzo in cui il BIOS carica il boot sector di un disco avviabile.">
+        <p class="q">Calcola l'indirizzo fisico di <code>07C0h:0000h</code> (5 cifre esadecimali).</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="0230" data-label="Offset =" data-hint="Sottrai al fisico il segmento già moltiplicato per 16 (5A000h)." data-explain="5A00h × 16 = 5A000h; l'offset è 5A230h − 5A000h = 0230h.">
+        <p class="q">Il segmento è <code>5A00h</code> e l'indirizzo fisico è <code>5A230h</code>. Quanto vale l'offset? (esadecimale)</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="10020" data-label="Fisico =" data-hint="1002h × 16 = 10020h." data-explain="10020h + 0000h = 10020h: è lo stesso indirizzo fisico di 1000h:0020h. Due indirizzi logici diversi, un solo byte.">
+        <p class="q">Calcola l'indirizzo fisico di <code>1002h:0000h</code> (5 cifre esadecimali).</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
