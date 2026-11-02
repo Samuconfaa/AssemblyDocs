@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17202e">
+<title>7. I tipi di dati · Assembly 8086</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="tipi-di-dati">
+<div id="layout">
+  <aside id="sidebar"></aside>
+  <main id="content">
+
+    <p class="kicker">Capitolo 7 di 8</p>
+    <h1>I tipi di dati</h1>
+    <p class="lead">In assembly la memoria contiene solo bit. Numeri, lettere e frasi sono tutti byte: a dare il significato siamo noi, con il modo in cui li dichiariamo e li leggiamo.</p>
+
+    <section id="teoria">
+      <h2>Teoria</h2>
+
+      <h3>Le unità di misura</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>Bit</th><th>Direttiva</th><th>Valori senza segno</th></tr></thead>
+          <tbody>
+            <tr><td>Bit</td><td>1</td><td>—</td><td>0 – 1</td></tr>
+            <tr><td>Nibble</td><td>4</td><td>—</td><td>0 – 15 (una cifra esadecimale)</td></tr>
+            <tr><td><strong>Byte</strong></td><td>8</td><td><code>db</code></td><td>0 – 255</td></tr>
+            <tr><td><strong>Word</strong></td><td>16</td><td><code>dw</code></td><td>0 – 65.535</td></tr>
+            <tr><td><strong>Doubleword</strong></td><td>32</td><td><code>dd</code></td><td>0 – 4.294.967.295</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Non esistono tipi come «intero», «carattere» o «booleano»: esistono solo byte, word e doubleword. Le direttive <code>db</code> (<em>define byte</em>), <code>dw</code> (<em>define word</em>) e <code>dd</code> (<em>define doubleword</em>) riservano memoria nel segmento dati e danno un nome a quella zona.</p>
+
+      <h3>Dichiarare le variabili</h3>
+      <pre class="asm">.data
+a      db 25             ; un byte con valore 25
+b      dw 1234h          ; una word (2 byte)
+c      dd 12345678h      ; una doubleword (4 byte)
+vett   db 1, 2, 3, 4     ; array di 4 byte
+zeri   db 10 dup(0)      ; 10 byte, tutti uguali a 0
+x      db ?              ; un byte non inizializzato
+msg    db "Ciao$"        ; una stringa: un byte per carattere</pre>
+      <p><code>dup</code> (<em>duplicate</em>) ripete un valore tante volte: <code>db 5 dup(7)</code> equivale a <code>db 7, 7, 7, 7, 7</code>. Il punto interrogativo significa «riserva lo spazio, non importa il valore iniziale».</p>
+      <div class="box nota">
+        <span class="box-title">Quando la dimensione non si capisce</span>
+        <p><code>mov [bx], 5</code> è ambigua: scrive un byte o una word? Si risolve con <code>byte ptr</code> o <code>word ptr</code>: <code>mov byte ptr [bx], 5</code>.</p>
+      </div>
+
+      <h3>Numeri senza segno e con segno</h3>
+      <p>Lo stesso gruppo di bit si può leggere in due modi:</p>
+      <ul>
+        <li><strong>senza segno</strong>: tutti i bit sono valore. Un byte va da <strong>0 a 255</strong> (una word da 0 a 65.535);</li>
+        <li><strong>con segno</strong>, in <em>complemento a 2</em>: il bit più a sinistra indica il segno (1 = negativo). Un byte va da <strong>−128 a +127</strong> (una word da −32.768 a +32.767).</li>
+      </ul>
+      <div class="table-wrap">
+        <table class="center">
+          <thead><tr><th>Binario</th><th>Hex</th><th>Senza segno</th><th>Con segno</th></tr></thead>
+          <tbody>
+            <tr><td>0000 0000</td><td>00h</td><td>0</td><td>0</td></tr>
+            <tr><td>0000 0101</td><td>05h</td><td>5</td><td>5</td></tr>
+            <tr><td>0111 1111</td><td>7Fh</td><td>127</td><td>127</td></tr>
+            <tr><td>1000 0000</td><td>80h</td><td>128</td><td>−128</td></tr>
+            <tr><td>1111 1011</td><td>0FBh</td><td>251</td><td>−5</td></tr>
+            <tr><td>1111 1111</td><td>0FFh</td><td>255</td><td>−1</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="box teoria">
+        <span class="box-title">Come si cambia segno (complemento a 2)</span>
+        <p>Per ottenere −N da N: <strong>inverti tutti i bit e aggiungi 1</strong>.</p>
+        <p>Esempio con 5 su 8 bit: <code>0000 0101</code> → inverti: <code>1111 1010</code> → aggiungi 1: <code>1111 1011</code> = FBh = −5.</p>
+      </div>
+      <p>La CPU non sa se un byte è «con segno» o no: i bit sono gli stessi. Siamo noi a scegliere come leggerli (e la CPU ci aiuta con due flag diversi: CF per il senza segno, OF per il con segno, come visto nel capitolo 2).</p>
+
+      <h3>I caratteri e il codice ASCII</h3>
+      <p>Un carattere è un numero: il codice <strong>ASCII</strong> associa a ogni lettera, cifra e segno un valore da 0 a 127, che sta in un byte. Quelli da ricordare:</p>
+      <div class="table-wrap">
+        <table class="center">
+          <thead><tr><th>Carattere</th><th>Hex</th><th>Decimale</th></tr></thead>
+          <tbody>
+            <tr><td>'0' … '9'</td><td>30h … 39h</td><td>48 … 57</td></tr>
+            <tr><td>'A' … 'Z'</td><td>41h … 5Ah</td><td>65 … 90</td></tr>
+            <tr><td>'a' … 'z'</td><td>61h … 7Ah</td><td>97 … 122</td></tr>
+            <tr><td>spazio</td><td>20h</td><td>32</td></tr>
+            <tr><td>Invio (CR)</td><td>0Dh</td><td>13</td></tr>
+            <tr><td>nuova riga (LF)</td><td>0Ah</td><td>10</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li><code>mov al, 'A'</code> e <code>mov al, 41h</code> sono la stessa istruzione.</li>
+        <li>Da maiuscola a minuscola si somma <code>20h</code>: <code>'A'</code> (41h) → <code>'a'</code> (61h).</li>
+        <li>La cifra <code>'7'</code> vale <code>37h</code>: per ottenere il numero 7 si sottrae <code>30h</code> (<code>sub al, 30h</code>).</li>
+      </ul>
+      <p>Una <strong>stringa</strong> è una sequenza di byte, uno per carattere. Come si capisce dove finisce? Dipende da chi la legge: la funzione di stampa del DOS (capitolo 8) usa il carattere <code>'$'</code> come terminatore, mentre il linguaggio C usa il byte 0.</p>
+
+      <h3>Little endian: l'ordine dei byte</h3>
+      <p>I dati più lunghi di un byte occupano più celle consecutive. L'8086 usa la regola <strong>little endian</strong>: il byte <em>meno significativo</em> (quello «piccolo») viene scritto all'indirizzo <em>più basso</em>.</p>
+      <div class="table-wrap">
+        <table class="center">
+          <thead><tr><th>Dichiarazione</th><th>Byte in memoria (dall'indirizzo più basso)</th></tr></thead>
+          <tbody>
+            <tr><td><code>dw 1234h</code></td><td>34h, 12h</td></tr>
+            <tr><td><code>dd 12345678h</code></td><td>78h, 56h, 34h, 12h</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Quando poi si legge con <code>mov ax, b</code> la CPU rimette le cose in ordine: AX vale di nuovo <code>1234h</code>. Lo vedi soltanto se guardi la memoria byte per byte.</p>
+
+      <div class="box breve">
+        <span class="box-title">In breve</span>
+        <ul>
+          <li><code>db</code> = 1 byte, <code>dw</code> = 2 byte, <code>dd</code> = 4 byte; <code>dup</code> ripete, <code>?</code> non inizializza.</li>
+          <li>Senza segno: 0–255 (byte). Con segno (complemento a 2): −128–127.</li>
+          <li>I caratteri sono numeri ASCII: 'A' = 41h, 'a' = 61h, '0' = 30h.</li>
+          <li>Little endian: il byte basso va all'indirizzo basso.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="domande" class="practice">
+      <h2>Domande</h2>
+
+      <div class="quiz" data-answer="c" data-explain="Con 8 bit si hanno 2^8 = 256 combinazioni, quindi senza segno da 0 a 255.">
+        <p class="q">Qual è l'intervallo di un byte <strong>senza segno</strong>?</p>
+        <label><input type="radio" value="a"> da 0 a 127</label>
+        <label><input type="radio" value="b"> da −128 a 127</label>
+        <label><input type="radio" value="c"> da 0 a 255</label>
+        <label><input type="radio" value="d"> da 0 a 65.535</label>
+      </div>
+
+      <div class="quiz" data-answer="a" data-explain="In complemento a 2 con 8 bit si rappresentano i numeri da −128 a +127.">
+        <p class="q">Qual è l'intervallo di un byte <strong>con segno</strong>?</p>
+        <label><input type="radio" value="a"> da −128 a +127</label>
+        <label><input type="radio" value="b"> da −127 a +128</label>
+        <label><input type="radio" value="c"> da 0 a 255</label>
+        <label><input type="radio" value="d"> da −255 a +255</label>
+      </div>
+
+      <div class="quiz" data-answer="d" data-explain="FFh = 1111 1111b: letto con segno (complemento a 2) vale −1; letto senza segno vale 255.">
+        <p class="q">Quanto vale <code>0FFh</code> se lo leggi come byte <strong>con segno</strong>?</p>
+        <label><input type="radio" value="a"> 255</label>
+        <label><input type="radio" value="b"> −255</label>
+        <label><input type="radio" value="c"> 0</label>
+        <label><input type="radio" value="d"> −1</label>
+      </div>
+
+      <div class="quiz" data-answer="b" data-explain="'A' ha codice ASCII 65 decimale, cioè 41h. Le minuscole iniziano da 61h, le cifre da 30h.">
+        <p class="q">Qual è il codice ASCII di <code>'A'</code> in esadecimale?</p>
+        <label><input type="radio" value="a"> 30h</label>
+        <label><input type="radio" value="b"> 41h</label>
+        <label><input type="radio" value="c"> 61h</label>
+        <label><input type="radio" value="d"> 20h</label>
+      </div>
+
+      <div class="quiz" data-answer="d" data-explain="Little endian: il byte meno significativo (34h) va all'indirizzo più basso, quello più significativo (12h) all'indirizzo successivo.">
+        <p class="q">Con <code>b dw 1234h</code>, quale byte si trova all'indirizzo <strong>più basso</strong> di <code>b</code>?</p>
+        <label><input type="radio" value="a"> 12h</label>
+        <label><input type="radio" value="b"> 21h</label>
+        <label><input type="radio" value="c"> 43h</label>
+        <label><input type="radio" value="d"> 34h</label>
+      </div>
+
+      <div class="quiz" data-answer="a" data-explain="dup ripete il valore indicato: db 5 dup(0) riserva 5 byte tutti uguali a 0.">
+        <p class="q">Cosa fa la dichiarazione <code>db 5 dup(0)</code>?</p>
+        <label><input type="radio" value="a"> Riserva 5 byte, tutti uguali a 0</label>
+        <label><input type="radio" value="b"> Riserva un solo byte che vale 5</label>
+        <label><input type="radio" value="c"> Riserva 5 word</label>
+        <label><input type="radio" value="d"> È un errore</label>
+      </div>
+    </section>
+
+    <section id="esercizi" class="practice">
+      <h2>Esercizi</h2>
+
+      <div class="exercise" data-type="num" data-answers="10" data-label="Decimale =" data-hint="Somma i valori dei bit a 1: 8 e 2." data-explain="00001010b = 8 + 2 = 10.">
+        <p class="q">Converti in decimale il numero binario <code>00001010b</code>.</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="FB" data-label="Hex =" data-hint="5 = 00000101b. Inverti tutti i bit (11111010b) e aggiungi 1." data-explain="11111010b + 1 = 11111011b = FBh, che rappresenta −5 su 8 bit.">
+        <p class="q">Scrivi in esadecimale il complemento a 2 (su 8 bit) del numero 5, cioè la rappresentazione di −5.</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="6" data-label="Byte =" data-hint="Ci sono 3 valori, e ognuno è una word (dw)." data-explain="3 elementi × 2 byte (una word) = 6 byte.">
+        <p class="q">Quanti byte occupa in memoria la variabile <code>arr dw 1, 2, 3</code>?</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="48" data-label="ASCII =" data-hint="Le cifre iniziano da 30h: converti 30h in decimale." data-explain="'0' = 30h = 3 × 16 = 48. Quindi '1' = 49, '2' = 50 e così via.">
+        <p class="q">Qual è il codice ASCII, in <strong>decimale</strong>, del carattere <code>'0'</code>?</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="-16" data-label="Valore =" data-hint="F0h senza segno è 240. Con segno su 8 bit si sottrae 256." data-explain="F0h = 240 senza segno; con segno è 240 − 256 = −16.">
+        <p class="q">Qual è il valore, <strong>con segno</strong> e in decimale, del byte <code>0F0h</code>?</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="CD" data-label="Byte =" data-hint="Little endian: il byte meno significativo va all'indirizzo più basso." data-explain="ABCDh è fatto dai byte AB (alto) e CD (basso): in memoria prima c'è CDh, poi ABh.">
+        <p class="q">Con <code>var dw 0ABCDh</code>, quanto vale il byte all'indirizzo <strong>più basso</strong> di <code>var</code>? (esadecimale)</p>
+      </div>
+
+      <div class="exercise" data-type="text" data-answers="n db 7|n db 07h|n db 7h|n db 0x07" data-solution="n db 7" data-hint="La forma è: nome direttiva valore. La direttiva per un byte è db." data-explain="n db 7 riserva un byte di nome n e lo inizializza a 7.">
+        <p class="q">Scrivi la dichiarazione di una variabile di tipo byte di nome <code>n</code> con valore iniziale 7.</p>
+      </div>
+
+      <div class="exercise" data-type="text" data-answers="sub al,30h|sub al,'0'|sub al,48|sub al,0x30" data-solution="sub al, 30h" data-hint="Il codice ASCII delle cifre parte da 30h: come ottieni il numero dalla cifra?" data-explain="Il carattere '7' vale 37h; togliendo 30h si ottiene il numero 7.">
+        <p class="q">AL contiene il carattere <code>'7'</code> (37h). Scrivi l'istruzione che lo trasforma nel numero 7.</p>
+      </div>
+    </section>
+
+    <section id="prova">
+      <h2>Prova tu</h2>
+      <p>Guarda nel simulatore come il complemento a 2 e l'ASCII sono solo numeri. Osserva la colonna «Con segno» e confrontala con «Decimale». Prova anche a cambiare <code>0FFh</code> con altri numeri.</p>
+      <div class="sim"><textarea>mov al, 5
+neg al            ; complemento a 2: AL diventa FB (-5 con segno)
+mov bl, 41h       ; il codice ASCII di 'A'
+add bl, 20h       ; da 'A' (41h) a 'a' (61h)
+mov cl, 37h       ; il carattere '7'
+sub cl, 30h       ; ora CL contiene il numero 7</textarea></div>
+    </section>
+
+  </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
