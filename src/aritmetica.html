@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17202e">
+<title>2. Operazioni aritmetiche · Assembly 8086</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="aritmetica">
+<div id="layout">
+  <aside id="sidebar"></aside>
+  <main id="content">
+
+    <p class="kicker">Capitolo 2 di 8</p>
+    <h1>Operazioni aritmetiche</h1>
+    <p class="lead">Somme, sottrazioni, moltiplicazioni e divisioni: come le esegue la CPU e come si interpretano i flag che lascia dietro di sé.</p>
+
+    <section id="teoria">
+      <h2>Teoria</h2>
+
+      <h3>Le istruzioni principali</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Istruzione</th><th>Effetto</th><th>Esempio</th></tr></thead>
+          <tbody>
+            <tr><td><code>add dest, src</code></td><td>dest = dest + src</td><td><code>add ax, bx</code></td></tr>
+            <tr><td><code>sub dest, src</code></td><td>dest = dest − src</td><td><code>sub al, 5</code></td></tr>
+            <tr><td><code>inc dest</code></td><td>dest = dest + 1</td><td><code>inc cx</code></td></tr>
+            <tr><td><code>dec dest</code></td><td>dest = dest − 1</td><td><code>dec cx</code></td></tr>
+            <tr><td><code>neg dest</code></td><td>dest = −dest (cambio di segno)</td><td><code>neg ax</code></td></tr>
+            <tr><td><code>mul src</code></td><td>moltiplicazione (numeri senza segno)</td><td><code>mul bl</code></td></tr>
+            <tr><td><code>div src</code></td><td>divisione (numeri senza segno)</td><td><code>div bl</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Somma e sottrazione <strong>modificano la destinazione</strong>: <code>add ax, bx</code> mette il risultato in AX e BX resta com'era. Come per <code>mov</code>, i due operandi devono avere la stessa dimensione.</p>
+
+      <pre class="asm">mov ax, 12
+add ax, 8        ; AX = 20
+sub ax, 5        ; AX = 15
+inc ax           ; AX = 16
+dec ax           ; AX = 15
+neg ax           ; AX = -15  (cioè FFF1h)</pre>
+
+      <h3>I flag</h3>
+      <p>Dopo molte operazioni la CPU aggiorna il registro dei <strong>flag</strong>: tanti piccoli bit (vero/falso) che descrivono com'è andata l'ultima operazione. I quattro più importanti:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Flag</th><th>Nome</th><th>Vale 1 quando...</th></tr></thead>
+          <tbody>
+            <tr><td><strong>ZF</strong></td><td>Zero Flag</td><td>il risultato è zero</td></tr>
+            <tr><td><strong>SF</strong></td><td>Sign Flag</td><td>il bit più significativo del risultato è 1 (numero negativo, se lo leggi con segno)</td></tr>
+            <tr><td><strong>CF</strong></td><td>Carry Flag</td><td>c'è stato un riporto (o un prestito) oltre l'ultimo bit: il risultato non entra, ragionando senza segno</td></tr>
+            <tr><td><strong>OF</strong></td><td>Overflow Flag</td><td>il risultato non entra, ragionando con segno</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="box esempio">
+        <span class="box-title">Esempio: il riporto</span>
+        <pre class="asm">mov al, 200
+add al, 100      ; 200 + 100 = 300, ma in 8 bit il massimo è 255</pre>
+        <p>Il risultato corretto (300) non entra in 8 bit: AL diventa <code>300 − 256 = 44</code> e il flag <strong>CF vale 1</strong> per segnalare il riporto perso.</p>
+      </div>
+      <p><code>inc</code> e <code>dec</code> aggiornano ZF, SF e OF ma <strong>non toccano CF</strong>. Le istruzioni di salto condizionato (che vedrai più avanti) usano proprio questi flag per decidere cosa fare.</p>
+
+      <h3>La moltiplicazione: MUL</h3>
+      <p>Il risultato di una moltiplicazione è lungo il <strong>doppio</strong> degli operandi (due numeri da 8 bit possono dare 16 bit). Per questo <code>mul</code> ha operandi fissi:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Istruzione</th><th>Cosa moltiplica</th><th>Dove mette il risultato</th></tr></thead>
+          <tbody>
+            <tr><td><code>mul r8</code></td><td>AL × r8</td><td>AX (16 bit)</td></tr>
+            <tr><td><code>mul r16</code></td><td>AX × r16</td><td>DX:AX (32 bit: DX è la parte alta, AX la bassa)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <pre class="asm">mov al, 25
+mov bl, 10
+mul bl           ; AX = 250
+
+mov ax, 1000
+mov bx, 100
+mul bx           ; 100000 = 0001 86A0h  ->  DX = 0001h, AX = 86A0h</pre>
+      <p><code>mul</code> non accetta un numero come operando: <code>mul 10</code> è sbagliato, devi prima mettere il 10 in un registro.</p>
+
+      <h3>La divisione: DIV</h3>
+      <p>La divisione funziona al contrario: il <strong>dividendo</strong> è lungo il doppio del divisore, e produce due risultati, quoziente e resto.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Istruzione</th><th>Dividendo</th><th>Quoziente</th><th>Resto</th></tr></thead>
+          <tbody>
+            <tr><td><code>div r8</code></td><td>AX</td><td>AL</td><td>AH</td></tr>
+            <tr><td><code>div r16</code></td><td>DX:AX</td><td>AX</td><td>DX</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <pre class="asm">mov ax, 17
+mov bl, 5
+div bl           ; 17 / 5  ->  AL = 3 (quoziente), AH = 2 (resto)
+
+mov ax, 1000
+xor dx, dx       ; azzera DX: fa parte del dividendo!
+mov bx, 7
+div bx           ; AX = 142, DX = 6</pre>
+      <div class="box attenzione">
+        <span class="box-title">Attenzione ai due errori della div</span>
+        <ul>
+          <li><strong>Dividendo sporco:</strong> prima di <code>div</code> a 8 bit devi azzerare AH (<code>mov ah, 0</code>), prima di quella a 16 bit devi azzerare DX (<code>xor dx, dx</code>). Se contengono vecchi valori, il dividendo è sbagliato.</li>
+          <li><strong>Divisione per zero</strong> o quoziente troppo grande per entrare nel registro: la CPU genera un errore e il programma si ferma.</li>
+        </ul>
+      </div>
+      <p>Per i numeri <em>con segno</em> esistono le versioni <code>imul</code> e <code>idiv</code>; nei prossimi capitoli useremo soprattutto quelle senza segno.</p>
+
+      <div class="box breve">
+        <span class="box-title">In breve</span>
+        <ul>
+          <li><code>add</code>, <code>sub</code> cambiano la destinazione; <code>inc</code>, <code>dec</code>, <code>neg</code> hanno un solo operando.</li>
+          <li>I flag ZF, SF, CF, OF raccontano com'è andata l'ultima operazione.</li>
+          <li><code>mul</code>: risultato in AX (8 bit) oppure DX:AX (16 bit).</li>
+          <li><code>div</code>: quoziente in AL / AX, resto in AH / DX; azzera la parte alta del dividendo.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="domande" class="practice">
+      <h2>Domande</h2>
+
+      <div class="quiz" data-answer="c" data-explain="inc aumenta di 1 il registro (dec lo diminuisce di 1).">
+        <p class="q">Quale istruzione aumenta di 1 il valore di un registro?</p>
+        <label><input type="radio" value="a"> <code>mul</code></label>
+        <label><input type="radio" value="b"> <code>dec</code></label>
+        <label><input type="radio" value="c"> <code>inc</code></label>
+        <label><input type="radio" value="d"> <code>neg</code></label>
+      </div>
+
+      <div class="quiz" data-answer="c" data-explain="Moltiplicando due numeri da 16 bit il risultato può arrivare a 32 bit: DX contiene la parte alta e AX la parte bassa.">
+        <p class="q">Dopo <code>mul bx</code> (operando a 16 bit), dove si trova il risultato?</p>
+        <label><input type="radio" value="a"> Solo in AX</label>
+        <label><input type="radio" value="b"> In BX</label>
+        <label><input type="radio" value="c"> Nella coppia DX:AX</label>
+        <label><input type="radio" value="d"> Nella coppia CX:BX</label>
+      </div>
+
+      <div class="quiz" data-answer="b" data-explain="17 diviso 5 dà quoziente 3 e resto 2. Con div a 8 bit il quoziente va in AL e il resto in AH.">
+        <p class="q">Con <code>AX = 17</code> e <code>BL = 5</code>, dopo <code>div bl</code> cosa contengono AL e AH?</p>
+        <label><input type="radio" value="a"> AL = 2, AH = 3</label>
+        <label><input type="radio" value="b"> AL = 3, AH = 2</label>
+        <label><input type="radio" value="c"> AL = 5, AH = 17</label>
+        <label><input type="radio" value="d"> AL = 3, AH = 0</label>
+      </div>
+
+      <div class="quiz" data-answer="a" data-explain="ZF (Zero Flag) vale 1 quando il risultato dell'ultima operazione è zero.">
+        <p class="q">Cosa indica <code>ZF = 1</code>?</p>
+        <label><input type="radio" value="a"> Il risultato dell'ultima operazione è zero</label>
+        <label><input type="radio" value="b"> C'è stato un riporto</label>
+        <label><input type="radio" value="c"> Il risultato è negativo</label>
+        <label><input type="radio" value="d"> È avvenuta una divisione per zero</label>
+      </div>
+
+      <div class="quiz" data-answer="a" data-explain="Nella divisione a 16 bit il dividendo è la coppia DX:AX: se DX contiene un vecchio valore, il dividendo risulta enorme e sbagliato.">
+        <p class="q">Perché prima di una <code>div</code> a 16 bit conviene azzerare DX?</p>
+        <label><input type="radio" value="a"> Perché il dividendo è DX:AX e un DX «sporco» falsa il risultato</label>
+        <label><input type="radio" value="b"> Perché DX contiene il divisore</label>
+        <label><input type="radio" value="c"> Perché altrimenti il processore si spegne</label>
+        <label><input type="radio" value="d"> Per rendere il programma più veloce</label>
+      </div>
+    </section>
+
+    <section id="esercizi" class="practice">
+      <h2>Esercizi</h2>
+
+      <div class="exercise" data-type="num" data-answers="15" data-label="AX =" data-hint="12 + 8 = 20, poi togli 5." data-explain="12 + 8 = 20; 20 − 5 = 15.">
+        <p class="q">Quanto vale AX alla fine? (decimale)</p>
+        <pre class="asm">mov ax, 12
+add ax, 8
+sub ax, 5</pre>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="42" data-label="AX =" data-hint="mul bl calcola AL × BL e mette il risultato in AX." data-explain="6 × 7 = 42, e il risultato di mul a 8 bit finisce in AX.">
+        <p class="q">Quanto vale AX alla fine? (decimale)</p>
+        <pre class="asm">mov al, 6
+mov bl, 7
+mul bl</pre>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="3" data-label="AL =" data-hint="Il quoziente è il risultato intero della divisione 20 / 6." data-explain="20 / 6 = 3 con resto 2. Il quoziente va in AL.">
+        <p class="q">Quanto vale AL (quoziente) alla fine? (decimale)</p>
+        <pre class="asm">mov ax, 20
+mov bl, 6
+div bl</pre>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="2" data-label="AH =" data-hint="Il resto di 20 diviso 6 è quello che «avanza» dopo 3 × 6 = 18." data-explain="20 = 3 × 6 + 2, quindi il resto è 2 e finisce in AH.">
+        <p class="q">Con lo stesso codice dell'esercizio precedente, quanto vale AH (resto)? (decimale)</p>
+        <pre class="asm">mov ax, 20
+mov bl, 6
+div bl</pre>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="FFFB" data-label="AX =" data-hint="−5 in complemento a 2 su 16 bit: inverti i bit di 0005h e aggiungi 1 (FFFAh + 1)." data-explain="neg calcola il complemento a 2: 0005h → FFFAh + 1 = FFFBh, che rappresenta −5 su 16 bit.">
+        <p class="q">Quanto vale AX alla fine? (esadecimale, 4 cifre)</p>
+        <pre class="asm">mov ax, 5
+neg ax</pre>
+      </div>
+
+      <div class="exercise" data-type="text" data-answers="add ax,ax" data-solution="add ax, ax" data-hint="Raddoppiare significa sommare il numero a se stesso." data-explain="add ax, ax somma AX a sé stesso: AX = AX + AX = 2 × AX.">
+        <p class="q">Scrivi l'istruzione che raddoppia il valore di AX usando <code>add</code>.</p>
+      </div>
+
+      <div class="exercise" data-type="num" data-answers="4" data-label="AL =" data-hint="250 + 10 = 260, ma in 8 bit si arriva al massimo a 255 e poi si riparte da 0: togli 256." data-explain="260 − 256 = 4. Il flag CF diventa 1 perché c'è stato un riporto.">
+        <p class="q">Quanto vale AL alla fine? (decimale)</p>
+        <pre class="asm">mov al, 250
+add al, 10</pre>
+      </div>
+    </section>
+
+    <section id="prova">
+      <h2>Prova tu</h2>
+      <p>Esegui il programma e guarda AX, DX e i flag. Poi prova a cambiare i numeri: usa <code>mov al, 250</code> / <code>add al, 10</code> per vedere il flag CF, oppure <code>mov bl, 0</code> prima di una <code>div</code> per vedere l'errore di divisione per zero.</p>
+      <div class="sim"><textarea>mov ax, 20
+mov bl, 6
+div bl            ; AL = quoziente, AH = resto
+mov cx, 1000
+mov ax, 100
+mul cx            ; DX:AX = 100000</textarea></div>
+    </section>
+
+  </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

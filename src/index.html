@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17202e">
+<title>Assembly 8086 · Corso base</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="home">
+<div id="layout">
+  <aside id="sidebar"></aside>
+  <main id="content">
+
+    <div class="hero">
+      <h1>Impariamo l'Assembly</h1>
+      <p>Un percorso base in 8 capitoli per la classe terza: dai registri alla prima stampa a schermo.</p>
+      <p>Ogni capitolo ha teoria, domande, esercizi con correzione automatica e, dove serve, una prova interattiva.</p>
+    </div>
+
+    <h2>Come si studia con questo sito</h2>
+    <ol>
+      <li><strong>Leggi la teoria</strong> del capitolo con calma, provando a ripetere gli esempi.</li>
+      <li><strong>Rispondi alle domande</strong>: premi «Verifica» e il sito ti dice subito se hai ragione.</li>
+      <li><strong>Svolgi gli esercizi</strong>: scrivi la risposta e premi «Verifica» (o Invio). Se sbagli ricevi un suggerimento.</li>
+      <li><strong>Prova da solo</strong> nel simulatore, cambiando le istruzioni e osservando i registri.</li>
+    </ol>
+    <p>I tuoi progressi vengono salvati nel browser: puoi chiudere la pagina e riprendere dopo.</p>
+
+    <div class="box teoria">
+      <span class="box-title">Quale assembly studiamo?</span>
+      <p>Studiamo l'assembly del processore <strong>Intel 8086</strong> (famiglia x86) con la sintassi MASM/TASM. È il processore classico per imparare perché ha pochi registri, una memoria organizzata in segmenti e un meccanismo semplice di chiamate al sistema operativo.</p>
+      <p>Per provare i programmi sul tuo computer puoi usare un emulatore dell'8086 come <strong>emu8086</strong>, oppure DOSBox insieme a un assembler (MASM o TASM).</p>
+    </div>
+
+    <h2>I capitoli</h2>
+    <div class="cards">
+      <a class="card" href="registri.html">
+        <span class="cnum">Capitolo 1</span>
+        <h3>I registri general purpose</h3>
+        <p>AX, BX, CX, DX e i loro registri compagni. L'istruzione MOV.</p>
+        <span class="badge" data-progress-for="registri"></span>
+      </a>
+      <a class="card" href="aritmetica.html">
+        <span class="cnum">Capitolo 2</span>
+        <h3>Operazioni aritmetiche</h3>
+        <p>ADD, SUB, INC, DEC, NEG, MUL, DIV e i flag.</p>
+        <span class="badge" data-progress-for="aritmetica"></span>
+      </a>
+      <a class="card" href="traduzione.html">
+        <span class="cnum">Capitolo 3</span>
+        <h3>Dal sorgente al programma</h3>
+        <p>Assembler, linker, codice macchina e ciclo fetch-decode-execute.</p>
+        <span class="badge" data-progress-for="traduzione"></span>
+      </a>
+      <a class="card" href="stack.html">
+        <span class="cnum">Capitolo 4</span>
+        <h3>Lo stack e la sua gestione</h3>
+        <p>La pila LIFO, PUSH, POP e il registro SP.</p>
+        <span class="badge" data-progress-for="stack"></span>
+      </a>
+      <a class="card" href="segmentazione.html">
+        <span class="cnum">Capitolo 5</span>
+        <h3>La segmentazione</h3>
+        <p>Indirizzi logici e fisici, segmento e offset.</p>
+        <span class="badge" data-progress-for="segmentazione"></span>
+      </a>
+      <a class="card" href="data-stack.html">
+        <span class="cnum">Capitolo 6</span>
+        <h3>Data stack e gestione dei dati</h3>
+        <p>Variabili, indirizzamento della memoria, parametri sullo stack.</p>
+        <span class="badge" data-progress-for="data-stack"></span>
+      </a>
+      <a class="card" href="tipi-di-dati.html">
+        <span class="cnum">Capitolo 7</span>
+        <h3>I tipi di dati</h3>
+        <p>DB, DW, DD, numeri con segno, ASCII, little endian.</p>
+        <span class="badge" data-progress-for="tipi-di-dati"></span>
+      </a>
+      <a class="card" href="hello-world.html">
+        <span class="cnum">Capitolo 8</span>
+        <h3>Hello World e le chiamate di sistema</h3>
+        <p>Il primo programma completo e come INT 21h arriva al sistema operativo.</p>
+        <span class="badge" data-progress-for="hello-world"></span>
+      </a>
+    </div>
+
+    <h2>Prima di iniziare: numeri esadecimali</h2>
+    <p>In assembly si usa moltissimo l'<strong>esadecimale</strong> (base 16): ogni cifra esadecimale corrisponde esattamente a 4 bit, quindi un byte (8 bit) si scrive con due cifre. Le cifre sono 0-9 e poi A-F. Per distinguere le basi si aggiunge un suffisso: <code>25</code> è decimale, <code>25h</code> è esadecimale, <code>101b</code> è binario. Se un numero esadecimale inizia con una lettera si mette uno zero davanti: <code>0FFh</code>.</p>
+    <div class="table-wrap">
+      <table class="center">
+        <thead><tr><th>Hex</th><th>Binario</th><th>Dec</th><th>Hex</th><th>Binario</th><th>Dec</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>0000</td><td>0</td><td>8</td><td>1000</td><td>8</td></tr>
+          <tr><td>1</td><td>0001</td><td>1</td><td>9</td><td>1001</td><td>9</td></tr>
+          <tr><td>2</td><td>0010</td><td>2</td><td>A</td><td>1010</td><td>10</td></tr>
+          <tr><td>3</td><td>0011</td><td>3</td><td>B</td><td>1011</td><td>11</td></tr>
+          <tr><td>4</td><td>0100</td><td>4</td><td>C</td><td>1100</td><td>12</td></tr>
+          <tr><td>5</td><td>0101</td><td>5</td><td>D</td><td>1101</td><td>13</td></tr>
+          <tr><td>6</td><td>0110</td><td>6</td><td>E</td><td>1110</td><td>14</td></tr>
+          <tr><td>7</td><td>0111</td><td>7</td><td>F</td><td>1111</td><td>15</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Esempio: <code>3Ah</code> = 0011 1010b = 3 × 16 + 10 = 58.</p>
+
+    <p style="margin-top:2em"><button id="reset-progress" class="btn secondary" type="button">Azzera i progressi salvati</button></p>
+    <p class="footer-note">Corso base di Assembly · materiale didattico per la classe terza</p>
+  </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
