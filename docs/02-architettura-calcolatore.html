@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Modulo 2 — Architettura del calcolatore — AssemblyDocs">
+  <title>Modulo 2 — Architettura del calcolatore · AssemblyDocs</title>
+  <link rel="stylesheet" href="../highlight.css">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<a class="skip-link" href="#contenuto">Salta al contenuto</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="../index.html">
+      <span class="brand-mark" aria-hidden="true">A</span>
+      <span>Assembly<span class="brand-accent">Docs</span></span>
+    </a>
+    <nav class="top-nav" aria-label="Navigazione principale">
+      <a href="../index.html">Home</a>
+      <a href="../index.html#moduli">Moduli</a>
+      <a href="../index.html#progetto">Progetto</a>
+    </nav>
+  </div>
+</header>
+<div class="page">
+  <aside class="sidebar">
+    <p class="sidebar-label">Percorso</p>
+    <ol class="module-list">
+      <li><a href="../docs/01-introduzione-assembly.html"><span class="num">01</span><span>Introduzione all&#x27;Assembly</span></a></li>
+<li><a class="current" href="../docs/02-architettura-calcolatore.html" aria-current="page"><span class="num">02</span><span>Architettura del calcolatore</span></a></li>
+<li><a href="../docs/03-rappresentazione-dati.html"><span class="num">03</span><span>Rappresentazione dei dati</span></a></li>
+<li><a href="../docs/04-registri-cpu.html"><span class="num">04</span><span>Registri della CPU</span></a></li>
+<li><a href="../docs/05-struttura-sintassi.html"><span class="num">05</span><span>Struttura e sintassi</span></a></li>
+    </ol>
+    <div class="sidebar-note">
+      <p><strong>Riferimento</strong></p>
+      <p>x86-64 · sintassi Intel · NASM · Linux</p>
+    </div>
+  </aside>
+  <main id="contenuto" class="content">
+    <h1 id="modulo-2-architettura-del-calcolatore">Modulo 2 — Architettura del calcolatore</h1>
+<details class="toc" open><summary>In questa lezione</summary><div class="toc">
+<ul>
+<li><a href="#1-introduzione-e-definizione">1. Introduzione e definizione</a></li>
+<li><a href="#2-spiegazione-teorica-approfondita">2. Spiegazione teorica approfondita</a><ul>
+<li><a href="#21-componenti-principali">2.1 Componenti principali</a></li>
+<li><a href="#22-cpu">2.2 CPU</a></li>
+<li><a href="#23-memorie">2.3 Memorie</a></li>
+<li><a href="#24-architettura-von-neumann-e-harvard">2.4 Architettura Von Neumann e Harvard</a></li>
+<li><a href="#25-architetture-cisc-e-risc">2.5 Architetture CISC e RISC</a></li>
+</ul>
+</li>
+<li><a href="#3-funzionamento-passo-per-passo">3. Funzionamento passo per passo</a><ul>
+<li><a href="#passo-1-fetch">Passo 1 — Fetch</a></li>
+<li><a href="#passo-2-decode">Passo 2 — Decode</a></li>
+<li><a href="#passo-3-lettura-degli-operandi-e-accesso-ai-dati">Passo 3 — Lettura degli operandi e accesso ai dati</a></li>
+<li><a href="#passo-4-execute">Passo 4 — Execute</a></li>
+<li><a href="#passo-5-write-back-e-aggiornamento-di-rip">Passo 5 — Write-back e aggiornamento di RIP</a></li>
+<li><a href="#passo-6-ripetizione">Passo 6 — Ripetizione</a></li>
+</ul>
+</li>
+<li><a href="#4-sintassi-e-istruzioni-coinvolte">4. Sintassi e istruzioni coinvolte</a></li>
+<li><a href="#5-esempi-semplici-commentati">5. Esempi semplici commentati</a><ul>
+<li><a href="#esempio-1-un-dword-in-cache">Esempio 1 — Un dword in cache</a></li>
+<li><a href="#esempio-2-sedici-interi-una-linea">Esempio 2 — Sedici interi, una linea</a></li>
+<li><a href="#esempio-3-registro-vs-memoria">Esempio 3 — Registro vs memoria</a></li>
+<li><a href="#esempio-4-lo-stesso-indirizzo-virtuale-processi-diversi">Esempio 4 — Lo stesso indirizzo virtuale, processi diversi</a></li>
+</ul>
+</li>
+<li><a href="#6-esempi-piu-complessi">6. Esempi più complessi</a><ul>
+<li><a href="#61-un-ciclo-di-somma-dove-vanno-i-cicli">6.1 Un ciclo di somma: dove vanno i cicli</a></li>
+<li><a href="#62-page-fault-e-memoria-virtuale">6.2 Page fault e memoria virtuale</a></li>
+<li><a href="#63-perche-la-stessa-istruzione-ha-costi-diversi">6.3 Perché la stessa istruzione ha costi diversi</a></li>
+</ul>
+</li>
+<li><a href="#7-collegamenti-con-argomenti-precedenti">7. Collegamenti con argomenti precedenti</a></li>
+<li><a href="#8-errori-frequenti">8. Errori frequenti</a></li>
+<li><a href="#9-riepilogo-finale">9. Riepilogo finale</a></li>
+<li><a href="#10-esercizi-di-verifica">10. Esercizi di verifica</a><ul>
+<li><a href="#esercizi-facili">Esercizi facili</a></li>
+<li><a href="#esercizi-intermedi">Esercizi intermedi</a></li>
+<li><a href="#esercizi-difficili">Esercizi difficili</a></li>
+<li><a href="#esercizi-prevedi-il-risultato">Esercizi "prevedi il risultato"</a></li>
+<li><a href="#esercizi-scrivi-da-zero">Esercizi "scrivi da zero"</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</details>
+
+<blockquote>
+<p><strong>Prerequisiti</strong>: Modulo 1 (Assembly, ISA, codice macchina, ciclo di esecuzione).
+<strong>Architettura di riferimento</strong>: x86-64, NASM, Linux 64 bit.
+<strong>Obiettivo del modulo</strong>: capire da quali parti è fatto un calcolatore, come la
+CPU esegue le istruzioni, come funzionano le memorie e perché esistono famiglie
+di architetture diverse (von Neumann/Harvard, CISC/RISC).</p>
+</blockquote>
+<hr />
+<h2 id="1-introduzione-e-definizione">1. Introduzione e definizione</h2>
+<p>Un <strong>calcolatore</strong> è un sistema che esegue operazioni su dati rappresentati in
+forma binaria. Le parti che ci interessano per capire l'Assembly sono cinque:</p>
+<ol>
+<li><strong>CPU</strong> (processore): esegue le istruzioni.</li>
+<li><strong>Memoria centrale</strong> (RAM): contiene programmi e dati in esecuzione.</li>
+<li><strong>Memoria non volatile</strong> (ROM/flash): contiene il firmware di avvio.</li>
+<li><strong>Cache</strong>: memoria intermedia dentro o vicino alla CPU.</li>
+<li><strong>Bus e periferiche</strong>: collegano e alimentano il resto (dischi, tastiera,
+   rete, GPU, ...).</li>
+</ol>
+<p>Sopra tutto questo c'è il <strong>sistema operativo</strong>, che crea l'illusione di un
+ambiente ordinato: memoria virtuale, processi, file, system call.</p>
+<p>L'idea da fissare subito: <strong>l'Assembly non descrive solo istruzioni, descrive il
+loro effetto su una macchina concreta</strong>. Capire registri, cache, bus e memoria
+virtuale significa capire <em>perché</em> un programma Assembly è veloce o lento, e
+perché alcune istruzioni esistono.</p>
+<hr />
+<h2 id="2-spiegazione-teorica-approfondita">2. Spiegazione teorica approfondita</h2>
+<h3 id="21-componenti-principali">2.1 Componenti principali</h3>
+<h4 id="cpu-central-processing-unit">CPU (Central Processing Unit)</h4>
+<p>Il processore è il componente che <strong>legge, decodifica ed esegue</strong> le istruzioni.
+Al suo interno:</p>
+<ul>
+<li><strong>unità di controllo (CU)</strong>: coordina il ciclo di istruzione, gestisce i
+  segnali interni ed esterni, decide cosa fare e quando;</li>
+<li><strong>ALU</strong> (<em>Arithmetic Logic Unit</em>): esegue operazioni aritmetiche (somma,
+  sottrazione, ...) e logiche (AND, OR, XOR, shift, confronti);</li>
+<li><strong>registri</strong>: memoria interna piccolissima e veloce (valori, indirizzi, flag);</li>
+<li><strong>unità di decodifica</strong>: trasforma i byte delle istruzioni in operazioni
+  interne;</li>
+<li><strong>unità di gestione della memoria</strong> (MMU): traduce indirizzi virtuali in fisici;</li>
+<li><strong>cache</strong> interne (L1, spesso L2) e logica di controllo;</li>
+<li><strong>FPU/SIMD</strong>: unità per virgola mobile e operazioni vettoriali.</li>
+</ul>
+<p>Nei processori moderni molte di queste parti sono replicate per <strong>core</strong>.</p>
+<h4 id="memoria-ram">Memoria RAM</h4>
+<p>Contiene i programmi e i dati in esecuzione. È <strong>volatile</strong>: perde il contenuto
+allo spegnimento. È organizzata in <strong>celle numerate</strong> (byte) e accessibile
+tramite indirizzi. È molto più grande della cache e molto più lenta.</p>
+<h4 id="memoria-rom">Memoria ROM</h4>
+<p>Memoria <strong>non volatile</strong>, scrivibile in fabbrica o (nelle varianti flash/EEPROM)
+aggiornabile. Contiene il <strong>firmware</strong>: il codice che parte prima del sistema
+operativo (BIOS/UEFI su PC, bootloader su schede embedded). Sui PC moderni il
+firmware risiede in un chip flash SPI sulla scheda madre.</p>
+<h4 id="cache">Cache</h4>
+<p>Memoria piccola e velocissima che conserva copie di dati e istruzioni usati di
+recente o probabilmente usati a breve. È il ponte tra registri (velocissimi,
+pochissimi) e RAM (grande, lenta). Ne parliamo in dettaglio nel paragrafo 2.3.</p>
+<h4 id="bus">Bus</h4>
+<p>Insieme di collegamenti che trasportano informazioni. Storicamente si distingue:</p>
+<ul>
+<li><strong>bus degli indirizzi</strong>: quali celle si vogliono leggere/scrivere; la sua
+  larghezza determina lo spazio di indirizzamento (20 bit → 1 MB nell'8086; 32
+  bit → 4 GB; 64 bit teorici → spazio enorme, in pratica 48/57 bit virtuali);</li>
+<li><strong>bus dei dati</strong>: i valori trasferiti; la sua larghezza determina quanti bit
+  passano per volta;</li>
+<li><strong>bus di controllo</strong>: comandi (lettura, scrittura), clock, interrupt, ecc.</li>
+</ul>
+<p>Nei sistemi moderni i bus "classici" sono in gran parte sostituiti da
+collegamenti punto-punto (PCI Express, link tra core e memoria, interconnect tra
+chiplet), ma il modello concettuale resta valido.</p>
+<h4 id="periferiche-di-inputoutput">Periferiche di input/output</h4>
+<p>Dispositivi esterni e i loro <strong>controller</strong> (disco, tastiera, rete, USB, GPU).
+Due meccanismi importanti:</p>
+<ul>
+<li><strong>I/O memory-mapped</strong>: i registri del dispositivo sono mappati in indirizzi di
+  memoria, quindi si accede con normali istruzioni di load/store.</li>
+<li><strong>I/O su porte</strong>: spazio separato di indirizzi I/O, accessibile con istruzioni
+  dedicate (<code>in</code>/<code>out</code> su x86).</li>
+</ul>
+<p>Le periferiche comunicano con la CPU tramite <strong>interrupt</strong> (la CPU viene
+avvisata) e possono trasferire dati direttamente in memoria con <strong>DMA</strong> (<em>Direct
+Memory Access</em>), senza far copiare ogni byte alla CPU.</p>
+<hr />
+<h3 id="22-cpu">2.2 CPU</h3>
+<h4 id="che-cose-il-processore">Che cos'è il processore</h4>
+<p>È un circuito integrato che esegue un <strong>programma</strong> letto dalla memoria. Un
+processore moderno contiene più <strong>core</strong>, ciascuno capace di eseguire un flusso di
+istruzioni, più cache condivise, controller di memoria e interfacce.</p>
+<h4 id="come-vengono-eseguite-le-istruzioni">Come vengono eseguite le istruzioni</h4>
+<p>Il modello di riferimento è il <strong>ciclo di istruzione</strong>:</p>
+<ol>
+<li><strong>Fetch</strong> — la CPU legge dalla memoria l'istruzione all'indirizzo contenuto
+   in <code>RIP</code> (x86-64).</li>
+<li><strong>Decode</strong> — interpreta i byte: riconosce opcode, operandi, lunghezza;
+   internamente li traduce in <strong>micro-operazioni</strong>.</li>
+<li><strong>Execute</strong> — esegue l'operazione: ALU, accesso a memoria, salto, chiamata.</li>
+<li><strong>Write-back</strong> — scrive il risultato in un registro o in memoria; aggiorna i
+   flag; <code>RIP</code> avanza.</li>
+</ol>
+<p>Questo è il modello didattico. Il processore reale sovrappone le fasi
+(pipeline), ne esegue più di una per ciclo (superscalare) e può eseguirle fuori
+ordine (out-of-order).</p>
+<h4 id="clock-e-frequenza">Clock e frequenza</h4>
+<p>Il <strong>clock</strong> è il segnale che scandisce il ritmo interno. La frequenza (Hz)
+indica i cicli al secondo: 3 GHz = 3 miliardi di cicli/s, quindi un ciclo dura
+circa 0,33 ns.</p>
+<p>Attenzione: <strong>la frequenza non è la prestazione</strong>. Contano anche:</p>
+<ul>
+<li>quante istruzioni si completano per ciclo (<strong>IPC</strong>);</li>
+<li>l'efficienza della pipeline e delle cache;</li>
+<li>il numero di core;</li>
+<li>la latenza della memoria;</li>
+<li>il tipo di carico di lavoro.</li>
+</ul>
+<p>Due CPU a 3 GHz possono avere prestazioni molto diverse. I processori moderni
+hanno frequenze <strong>base</strong> e <strong>turbo</strong>, che dipendono da carico, temperatura e
+alimentazione.</p>
+<h4 id="ciclo-di-istruzione-in-dettaglio">Ciclo di istruzione in dettaglio</h4>
+<p>Esempio didattico con cinque stadi tipici (modello RISC classico):</p>
+<div class="highlight"><pre><span></span><code>IF  →  ID  →  EX  →  MEM  →  WB
+</code></pre></div>
+
+<ul>
+<li><strong>IF</strong> (<em>Instruction Fetch</em>): preleva l'istruzione, aggiorna il PC.</li>
+<li><strong>ID</strong> (<em>Instruction Decode</em>): decodifica, legge i registri operando.</li>
+<li><strong>EX</strong> (<em>Execute</em>): ALU, calcolo di indirizzi, confronti.</li>
+<li><strong>MEM</strong> (<em>Memory</em>): load/store, se l'istruzione accede alla memoria.</li>
+<li><strong>WB</strong> (<em>Write-Back</em>): scrive il risultato nel registro.</li>
+</ul>
+<p>Su x86 le pipeline sono più profonde (spesso 15–20 stadi) perché la decodifica è
+più complessa e le istruzioni hanno lunghezza variabile.</p>
+<h4 id="pipeline">Pipeline</h4>
+<p>La pipeline sovrappone l'esecuzione di più istruzioni: mentre una è in execute,
+la successiva è in decode, un'altra è in fetch. Idealmente si completa
+un'istruzione per ciclo, ma intervengono <strong>hazard</strong>:</p>
+<ul>
+<li><strong>strutturali</strong>: due istruzioni vogliono la stessa risorsa (es. la stessa
+  unità o la stessa porta di memoria);</li>
+<li><strong>dati</strong>: un'istruzione ha bisogno del risultato di una precedente non ancora
+  pronto (dipendenza RAW); mitigata con <strong>forwarding/bypass</strong> o <strong>stall</strong>;</li>
+<li><strong>controllo</strong>: un salto condizionato rende incerta la prossima istruzione;
+  mitigata con la <strong>predizione dei salti</strong>.</li>
+</ul>
+<p>Una predizione errata costa decine di cicli: la pipeline deve essere svuotata.
+Per questo i salti prevedibili (cicli con contatore) sono molto più economici di
+salti casuali.</p>
+<h4 id="parallelismo-a-livello-di-istruzione-ilp">Parallelismo a livello di istruzione (ILP)</h4>
+<p>L'ILP è la possibilità di eseguire più istruzioni contemporaneamente perché sono
+indipendenti. Si ottiene con:</p>
+<ul>
+<li><strong>pipeline</strong> (più istruzioni in fasi diverse);</li>
+<li><strong>superscalarità</strong> (più istruzioni avviate per ciclo);</li>
+<li><strong>esecuzione out-of-order</strong> (l'ordine di esecuzione non coincide con l'ordine
+  del programma, ma il risultato resta corretto);</li>
+<li><strong>register renaming</strong> (elimina dipendenze "false" sui nomi dei registri);</li>
+<li><strong>speculazione</strong> (esegue lavoro "probabile" e lo annulla se sbaglia).</li>
+</ul>
+<p>Limiti: dipendenze reali tra dati, latenza della memoria, salti imprevedibili,
+larghezza delle unità di esecuzione e della finestra di istruzioni.</p>
+<h4 id="core-e-thread">Core e thread</h4>
+<ul>
+<li>Un <strong>core</strong> è un'unità fisica di esecuzione con le proprie risorse.</li>
+<li>Un <strong>thread hardware</strong> è un contesto di esecuzione che condivide le unità di
+  un core tramite <strong>SMT</strong> (<em>Simultaneous Multithreading</em>, "Hyper-Threading" su
+  Intel). Due thread hardware sullo stesso core hanno registri separati ma
+  condividono cache e unità di esecuzione: il guadagno è reale ma <strong>non è il
+  doppio</strong>.</li>
+<li>Un <strong>thread software</strong> è un concetto del sistema operativo: un flusso di
+  esecuzione con il proprio stack e il proprio stato. Il SO lo assegna a un
+  thread hardware.</li>
+</ul>
+<p>Quindi: "core" e "thread" non sono sinonimi. <code>nproc</code> su Linux mostra i thread
+hardware disponibili al sistema (core × SMT), non necessariamente i core fisici.</p>
+<hr />
+<h3 id="23-memorie">2.3 Memorie</h3>
+<h4 id="primaria-e-secondaria">Primaria e secondaria</h4>
+<ul>
+<li><strong>Primaria</strong>: direttamente accessibile dalla CPU (registri, cache, RAM). Veloce
+  e costosa per bit; la RAM è volatile.</li>
+<li><strong>Secondaria</strong>: persistente e molto più capiente (SSD, HDD, flash). Non è
+  indirizzabile direttamente dalle normali istruzioni: i dati vanno portati in
+  memoria primaria dal sistema operativo.</li>
+</ul>
+<h4 id="ram-e-rom">RAM e ROM</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Caratteristica</th>
+<th>RAM</th>
+<th>ROM/flash</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Volatilità</td>
+<td>volatile</td>
+<td>non volatile</td>
+</tr>
+<tr>
+<td>Velocità</td>
+<td>alta (ma molto sotto la cache)</td>
+<td>bassa in lettura, molto bassa in scrittura</td>
+</tr>
+<tr>
+<td>Scopo</td>
+<td>programmi e dati in esecuzione</td>
+<td>firmware, configurazione, avvio</td>
+</tr>
+<tr>
+<td>Tecnologie</td>
+<td>SRAM (cache), DRAM (memoria principale)</td>
+<td>mask ROM, PROM, EPROM, EEPROM, flash</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>SRAM</strong> usa bistabili (flip-flop): veloce, costosa, usata nelle cache. <strong>DRAM</strong>
+usa condensatori: densa ed economica, ma richiede <strong>refresh</strong> periodico e ha
+latenza maggiore.</p>
+<h4 id="cache_1">Cache</h4>
+<p>La cache sfrutta due proprietà dei programmi:</p>
+<ul>
+<li><strong>località temporale</strong>: un dato appena usato è probabile che venga riusato;</li>
+<li><strong>località spaziale</strong>: se uso un dato, è probabile che usi anche i vicini.</li>
+</ul>
+<p>Per questo si trasferisce memoria in blocchi chiamati <strong>linee di cache</strong>
+(tipicamente 64 byte su x86-64). Livelli tipici:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Livello</th>
+<th>Dimensione tipica</th>
+<th>Latenza tipica</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Registri</td>
+<td>centinaia di byte</td>
+<td>&lt; 1 ciclo</td>
+<td>dentro la CPU</td>
+</tr>
+<tr>
+<td>L1</td>
+<td>32–64 KiB</td>
+<td>4–5 cicli</td>
+<td>spesso separata istruzioni/dati</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>256 KiB–2 MiB</td>
+<td>10–20 cicli</td>
+<td>per core</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>8–32 MiB</td>
+<td>30–70 cicli</td>
+<td>condivisa tra core</td>
+</tr>
+<tr>
+<td>RAM</td>
+<td>GB</td>
+<td>60–100 ns</td>
+<td>centinaia di cicli</td>
+</tr>
+</tbody>
+</table></div>
+<p>I numeri sono ordini di grandezza: dipendono dalla microarchitettura. Il punto
+concettuale è il <strong>salto di latenza</strong> tra un livello e il successivo.</p>
+<p>Quando la CPU cerca un dato:</p>
+<ul>
+<li><strong>hit</strong>: il dato è nella cache, si procede velocemente;</li>
+<li><strong>miss</strong>: si scende al livello successivo, si copia la linea e si continua.</li>
+</ul>
+<p>Le cache hanno anche politiche di <strong>associatività</strong> (dove può stare una linea),
+<strong>sostituzione</strong> (quale linea eliminare) e <strong>coerenza</strong> tra core (protocolli come
+MESI). Sono dettagli di microarchitettura, ma spiegano fenomeni come il <em>false
+sharing</em> e i crolli di prestazioni su accessi irregolari.</p>
+<h4 id="gerarchia-delle-memorie">Gerarchia delle memorie</h4>
+<div class="highlight"><pre><span></span><code>registri  &lt;  L1  &lt;  L2  &lt;  L3  &lt;  RAM  &lt;  SSD/HDD
+velocità  ───────────────────────────────────────►
+capacità  ◄───────────────────────────────────────
+costo/bit ◄───────────────────────────────────────
+</code></pre></div>
+
+<p>La gerarchia esiste perché non è possibile avere memoria insieme grande, veloce
+ed economica. Il programma deve essere scritto in modo da sfruttare le cache
+(accessi sequenziali, riuso dei dati, strutture compatte).</p>
+<h4 id="indirizzi-celle-byte-e-word">Indirizzi, celle, byte e word</h4>
+<ul>
+<li>La memoria è <strong>indirizzabile a byte</strong>: ogni byte ha un indirizzo.</li>
+<li>Una <strong>cella</strong> è l'unità minima indirizzabile: su x86 un byte.</li>
+<li>Una <strong>word</strong> è l'unità "naturale" dell'architettura, ma il significato cambia:</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Termine</th>
+<th>x86</th>
+<th>ARM64</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>byte</td>
+<td>8 bit</td>
+<td>8 bit</td>
+</tr>
+<tr>
+<td>word</td>
+<td><strong>16 bit</strong></td>
+<td><strong>32 bit</strong></td>
+</tr>
+<tr>
+<td>dword</td>
+<td>32 bit</td>
+<td>64 bit ("doubleword")</td>
+</tr>
+<tr>
+<td>qword</td>
+<td>64 bit</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p>Questo è un classico errore da esame: su x86 <code>word</code> significa 16 bit, non 32.
+NASM usa parole chiave esplicite: <code>byte</code>, <code>word</code>, <code>dword</code>, <code>qword</code>, <code>tword</code>,
+<code>oword</code>, <code>yword</code>, <code>zword</code>.</p>
+<h4 id="lettura-e-scrittura-in-memoria">Lettura e scrittura in memoria</h4>
+<p>Una lettura tipica:</p>
+<ol>
+<li>la CPU calcola l'indirizzo (da un registro, da un registro più uno
+   spostamento, da base + indice × scala, ...);</li>
+<li>controlla la cache;</li>
+<li>se c'è un miss, la richiesta va al livello successivo;</li>
+<li>il dato viene caricato in un registro.</li>
+</ol>
+<p>Una scrittura segue lo stesso percorso, ma deve anche gestire la coerenza tra
+cache e memoria.</p>
+<p>Dettagli importanti per l'Assembly:</p>
+<ul>
+<li><strong>Allineamento</strong>: accedere a un <code>dword</code> a un indirizzo multiplo di 4 è più
+  efficiente. Su x86 un accesso non allineato funziona ma può costare; su altre
+  architetture può causare fault. Un accesso che attraversa il confine di una
+  linea di cache costa due accessi.</li>
+<li><strong>Little-endian</strong> su x86-64: il byte meno significativo è al primo indirizzo.</li>
+<li><strong>Confini di pagina</strong>: un accesso che attraversa due pagine può richiedere due
+  traduzioni e, se una pagina non è mappata, causare un fault.</li>
+<li><strong>Memoria non inizializzata</strong>: non c'è garanzia sul contenuto (spesso zero per
+  le pagine nuove del sistema operativo, ma non farci affidamento).</li>
+</ul>
+<h4 id="memoria-virtuale">Memoria virtuale</h4>
+<p>Il programma non vede la RAM fisica: vede uno <strong>spazio di indirizzi virtuale</strong>.
+La <strong>MMU</strong> traduce ogni indirizzo virtuale in fisico usando le <strong>tabelle delle
+pagine</strong>, gestite dal sistema operativo.</p>
+<ul>
+<li>Lo spazio è diviso in <strong>pagine</strong> (tipicamente 4 KiB; pagine grandi 2 MiB o
+  1 GiB).</li>
+<li>Ogni voce di tabella contiene l'indirizzo fisico e i <strong>permessi</strong> (lettura,
+  scrittura, esecuzione, presenza).</li>
+<li>La traduzione è accelerata dal <strong>TLB</strong> (<em>Translation Lookaside Buffer</em>), una
+  cache di traduzioni recenti.</li>
+<li>Se la pagina non è presente, si ha un <strong>page fault</strong>: il kernel la carica (da
+  file o swap) o termina il processo se l'accesso è illegale.</li>
+<li>Il <strong>demand paging</strong> carica le pagine solo quando servono.</li>
+</ul>
+<p>La memoria virtuale dà:</p>
+<ul>
+<li><strong>isolamento</strong> tra processi (lo stesso indirizzo virtuale può mappare frame
+  fisici diversi);</li>
+<li><strong>protezione</strong> (codice non scrivibile, dati non eseguibili: NX);</li>
+<li><strong>condivisione</strong> (librerie mappate una volta sola);</li>
+<li><strong>ASLR</strong> (indirizzi randomizzati a ogni esecuzione);</li>
+<li>la possibilità di usare più memoria della RAM fisica (swap).</li>
+</ul>
+<p>Su x86-64 con paginazione a 4 livelli gli indirizzi virtuali sono di 48 bit
+utili (con paginazione a 5 livelli si arriva a 57 bit). Questo spiega perché un
+"64 bit" non usa davvero 64 bit di indirizzo.</p>
+<h4 id="pagine-e-segmenti-virtuali">Pagine e segmenti virtuali</h4>
+<p>Due concetti che vanno tenuti separati:</p>
+<ol>
+<li><strong>Pagine (paging)</strong>: suddivisione della memoria virtuale in blocchi di
+   dimensione fissa. È il meccanismo principale su x86-64.</li>
+<li><strong>Segmentazione</strong>: suddivisione in blocchi di dimensione variabile con base e
+   limite. Su x86 era centrale in modalità reale (<code>CS</code>, <code>DS</code>, <code>SS</code>, <code>ES</code>); in
+   modalità a 64 bit è quasi disattivata, tranne le basi di <code>FS</code>/<code>GS</code> usate per
+   il thread-local storage.</li>
+</ol>
+<p>Attenzione a un terzo uso del termine: nei file <strong>ELF</strong> i "segmenti" (descritti
+dai <em>program header</em>) sono regioni da caricare in memoria, mentre le "sezioni"
+(<code>.text</code>, <code>.data</code>, <code>.bss</code>) servono al linker. Non sono i segmenti della CPU.</p>
+<p>Layout tipico di un processo Linux x86-64 (indirizzi indicativi):</p>
+<div class="highlight"><pre><span></span><code>alta memoria
+┌─────────────────────────┐
+│ kernel (non accessibile)│
+├─────────────────────────┤
+│ stack            ↓      │  cresce verso il basso
+│ ...                     │
+│ heap             ↑      │  cresce verso l'alto
+├─────────────────────────┤
+│ .bss  (non inizializzati)│
+│ .data (inizializzati)   │
+│ .text (codice)          │
+└─────────────────────────┘
+bassa memoria
+</code></pre></div>
+
+<p>Con eseguibili non PIE il codice parte tipicamente intorno a <code>0x400000</code>; con
+PIE (default moderno) gli indirizzi sono randomizzati.</p>
+<hr />
+<h3 id="24-architettura-von-neumann-e-harvard">2.4 Architettura Von Neumann e Harvard</h3>
+<h4 id="von-neumann">Von Neumann</h4>
+<p>Un'unica memoria contiene <strong>sia istruzioni sia dati</strong>, con un unico percorso di
+accesso (concettualmente un solo bus). È il modello dei computer general-purpose
+e della maggior parte dei processori x86.</p>
+<p>Vantaggi:</p>
+<ul>
+<li>semplicità e flessibilità: la memoria è una sola, dimensionabile a piacere;</li>
+<li>un programma può essere trattato come dato (caricato, modificato, generato);</li>
+<li>costo contenuto.</li>
+</ul>
+<p>Svantaggi:</p>
+<ul>
+<li><strong>collo di bottiglia di von Neumann</strong>: fetch delle istruzioni e accesso ai dati
+  competono per lo stesso canale;</li>
+<li>un programma può sovrascrivere se stesso (potente, ma pericoloso);</li>
+<li>possibilità di eseguire dati (da cui le mitigazioni NX/W^X).</li>
+</ul>
+<h4 id="harvard">Harvard</h4>
+<p>Memorie e percorsi <strong>separati</strong> per istruzioni e dati. La CPU può prelevare
+un'istruzione e contemporaneamente leggere un dato.</p>
+<p>Vantaggi:</p>
+<ul>
+<li>nessuna competizione tra fetch e accesso ai dati;</li>
+<li>pipeline più regolare;</li>
+<li>sicurezza intrinseca: i dati non sono eseguibili.</li>
+</ul>
+<p>Svantaggi:</p>
+<ul>
+<li>due memorie e due bus: più costo e complessità;</li>
+<li>meno flessibilità (un programma non può facilmente modificarsi);</li>
+<li>dimensioni separate da bilanciare.</li>
+</ul>
+<h4 id="modello-reale-harvard-modificata">Modello reale: Harvard modificata</h4>
+<p>I processori moderni non sono né von Neumann puri né Harvard puri. Tipicamente:</p>
+<ul>
+<li><strong>L1 separata</strong> per istruzioni (L1I) e dati (L1D);</li>
+<li><strong>L2/L3 unificate</strong>;</li>
+<li><strong>RAM unica</strong>.</li>
+</ul>
+<p>Questo è chiamato <strong>architettura Harvard modificata</strong>: si ottengono i vantaggi
+della separazione vicino alla CPU senza duplicare tutta la memoria.</p>
+<p>Esempi:</p>
+<ul>
+<li><strong>von Neumann</strong>: PC classici, x86, molti sistemi general-purpose;</li>
+<li><strong>Harvard</strong>: microcontrollori AVR e PIC, DSP, alcuni Cortex-M (interfacce
+  separate I/D);</li>
+<li><strong>Harvard modificata</strong>: x86-64 e ARM moderni con cache L1 separate.</li>
+</ul>
+<hr />
+<h3 id="25-architetture-cisc-e-risc">2.5 Architetture CISC e RISC</h3>
+<h4 id="cisc">CISC</h4>
+<p><strong>Complex Instruction Set Computer</strong>: istruzioni numerose, potenti e di forma
+variabile. Caratteristiche tipiche:</p>
+<ul>
+<li>lunghezza variabile (x86: 1–15 byte);</li>
+<li>molti modi di indirizzamento;</li>
+<li>operazioni che leggono/scrivono direttamente in memoria;</li>
+<li>istruzioni complesse implementate anche con <strong>microcodice</strong>;</li>
+<li>forte attenzione alla <strong>compatibilità</strong> e alla <strong>densità del codice</strong>.</li>
+</ul>
+<p>Esempio: <strong>x86/x86-64</strong>.</p>
+<h4 id="risc">RISC</h4>
+<p><strong>Reduced Instruction Set Computer</strong>: poche istruzioni semplici e regolari.
+Caratteristiche tipiche:</p>
+<ul>
+<li>lunghezza fissa (4 byte, con eventuali estensioni compresse);</li>
+<li>architettura <strong>load-store</strong>: solo load/store accedono alla memoria;</li>
+<li>molti registri;</li>
+<li>operazioni ALU solo tra registri;</li>
+<li>decodifica semplice, adatta alla pipeline;</li>
+<li>istruzioni condizionali o <em>select</em> invece di salti ovunque.</li>
+</ul>
+<p>Esempi: <strong>ARM/ARM64</strong>, <strong>MIPS</strong>, <strong>RISC-V</strong>, <strong>POWER</strong>.</p>
+<h4 id="differenze-in-tabella">Differenze in tabella</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Aspetto</th>
+<th>CISC (x86-64)</th>
+<th>RISC (ARM64, RISC-V)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Numero di istruzioni</td>
+<td>molte, anche complesse</td>
+<td>poche, semplici</td>
+</tr>
+<tr>
+<td>Lunghezza</td>
+<td>variabile (1–15 B)</td>
+<td>fissa (4 B), a volte compressa</td>
+</tr>
+<tr>
+<td>Operandi in memoria</td>
+<td>sì, frequenti</td>
+<td>no, solo load/store</td>
+</tr>
+<tr>
+<td>Registri</td>
+<td>16 GPR</td>
+<td>31–32</td>
+</tr>
+<tr>
+<td>Decodifica</td>
+<td>complessa, micro-operazioni</td>
+<td>semplice e regolare</td>
+</tr>
+<tr>
+<td>Pressione sul codice</td>
+<td>minore (codice denso)</td>
+<td>maggiore (più istruzioni)</td>
+</tr>
+<tr>
+<td>Pipeline</td>
+<td>profonda, con decodifica costosa</td>
+<td>naturale, profonda</td>
+</tr>
+<tr>
+<td>Compatibilità storica</td>
+<td>fortissima</td>
+<td>minore</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="esempi-concreti">Esempi concreti</h4>
+<ul>
+<li><strong>x86-64</strong>: un'istruzione può sommare un registro a un valore in memoria:
+  <code>add eax, [rbx]</code>. La CPU la decodifica in micro-operazioni (load + add).</li>
+<li><strong>ARM64</strong>: la stessa operazione richiede due istruzioni:
+  <code>ldr w1, [x0]</code> poi <code>add w0, w0, w1</code>. In compenso la pipeline è più semplice.</li>
+<li><strong>RISC-V</strong>: nessun registro flag; i confronti producono un valore, i salti
+  usano quel valore (<code>blt</code>, <code>bge</code>, ...). La ISA è modulare: <code>M</code> per
+  moltiplicazione/divisione, <code>A</code> per atomici, <code>F</code>/<code>D</code> per virgola mobile, <code>C</code> per
+  istruzioni compresse.</li>
+<li><strong>MIPS</strong>: nelle versioni classiche i salti hanno <strong>delay slot</strong> (l'istruzione
+  successiva al salto viene eseguita comunque); i risultati di mul/div finiscono
+  in <code>HI</code>/<code>LO</code>.</li>
+</ul>
+<h4 id="vantaggi-e-svantaggi">Vantaggi e svantaggi</h4>
+<p><strong>CISC</strong></p>
+<ul>
+<li>Pro: codice denso (meno byte, migliore uso della cache di istruzioni),
+  compatibilità, meno istruzioni da scrivere, operazioni potenti.</li>
+<li>Contro: decodifica complessa, consumo energetico, pipeline complicate,
+  istruzioni di lunghezza variabile più difficili da prelevare in parallelo.</li>
+</ul>
+<p><strong>RISC</strong></p>
+<ul>
+<li>Pro: decodifica semplice, pipeline efficienti, basso consumo, molti registri,
+  buon target per i compilatori, ISA più pulite da insegnare.</li>
+<li>Contro: più istruzioni per fare lo stesso lavoro (codice più grande), accesso
+  alla memoria più esplicito, compatibilità storica limitata.</li>
+</ul>
+<p><strong>Mito da sfatare</strong>: "RISC è sempre più veloce di CISC". Non è vero in assoluto.
+I core x86 moderni traducono le istruzioni complesse in micro-operazioni simili a
+quelle RISC; il confronto reale dipende da implementazione, carico di lavoro,
+consumo e costo. La distinzione descrive il <strong>modello di ISA</strong>, non garantisce
+prestazioni.</p>
+<hr />
+<h2 id="3-funzionamento-passo-per-passo">3. Funzionamento passo per passo</h2>
+<p>Seguiamo l'esecuzione di un frammento (sintassi NASM, dettagli nei moduli
+successivi):</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="nb">rbx</span><span class="p">]</span><span class="w">    </span><span class="c1">; carica 4 byte dall'indirizzo in RBX</span>
+<span class="w">    </span><span class="nf">add</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="nb">ecx</span><span class="w">      </span><span class="c1">; somma ECX a EAX</span>
+</code></pre></div>
+
+<h3 id="passo-1-fetch">Passo 1 — Fetch</h3>
+<p>La CPU usa <code>RIP</code> per leggere i byte dell'istruzione <code>mov</code>. La richiesta passa
+prima dalla <strong>L1I</strong> (cache istruzioni). Se c'è un miss, scende a L2, L3, RAM. La
+linea contenente l'istruzione viene copiata nella cache.</p>
+<h3 id="passo-2-decode">Passo 2 — Decode</h3>
+<p>I byte vengono decodificati: opcode <code>mov</code>, operando destinazione <code>eax</code>, operando
+sorgente <code>[rbx]</code> (indirizzo in <code>RBX</code>). Internamente l'istruzione diventa
+micro-operazioni: calcolo dell'indirizzo, load, scrittura del registro.</p>
+<h3 id="passo-3-lettura-degli-operandi-e-accesso-ai-dati">Passo 3 — Lettura degli operandi e accesso ai dati</h3>
+<p>La CPU legge <code>RBX</code> e usa il valore come indirizzo. La richiesta di dati passa
+dalla <strong>L1D</strong> (cache dati), separata dalla L1I. Se il dato non è in cache, si
+scende nella gerarchia. Se l'indirizzo non è mappato, scatta un <strong>page fault</strong> e
+interviene il kernel.</p>
+<h3 id="passo-4-execute">Passo 4 — Execute</h3>
+<p>L'ALU somma <code>ECX</code> a <code>EAX</code>. Le istruzioni sono indipendenti? No: <code>add</code> dipende dal
+valore caricato da <code>mov</code>. La pipeline può usare <strong>forwarding</strong> per non aspettare
+il write-back, ma la latenza del load (tipicamente 4–5 cicli se in L1, centinaia
+se in RAM) resta un vincolo.</p>
+<h3 id="passo-5-write-back-e-aggiornamento-di-rip">Passo 5 — Write-back e aggiornamento di RIP</h3>
+<p>Il risultato viene scritto in <code>EAX</code>; i flag vengono aggiornati da <code>add</code> (non da
+<code>mov</code>, che non li tocca). <code>RIP</code> avanza oltre le due istruzioni.</p>
+<h3 id="passo-6-ripetizione">Passo 6 — Ripetizione</h3>
+<p>Il ciclo ricomincia. Se il frammento è dentro un ciclo, la <strong>predizione dei
+salti</strong> e la <strong>cache</strong> determinano gran parte delle prestazioni: un ciclo con
+accessi sequenziali in memoria è veloce; uno con accessi casuali e salti
+imprevedibili è lento.</p>
+<hr />
+<h2 id="4-sintassi-e-istruzioni-coinvolte">4. Sintassi e istruzioni coinvolte</h2>
+<p>In questo modulo <strong>non si introducono nuove istruzioni</strong>. Compaiono solo, come
+esempi, forme già viste o anticipate:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Elemento</th>
+<th>Significato</th>
+<th>Modulo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mov eax, [rbx]</code></td>
+<td>carica un <code>dword</code> dalla memoria</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>add eax, ecx</code></td>
+<td>somma tra registri</td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>[rbx]</code></td>
+<td>operando in memoria: indirizzo contenuto in <code>RBX</code></td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>byte</code>, <code>word</code>, <code>dword</code>, <code>qword</code></td>
+<td>dimensioni degli operandi</td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p>Cose utili da riconoscere già ora:</p>
+<ul>
+<li><strong><code>word</code> su x86 = 16 bit</strong>; su ARM64 "word" = 32 bit. Il contesto conta.</li>
+<li>Un riferimento a memoria tra parentesi quadre non significa "il contenuto di
+  <code>RBX</code>", ma "la memoria all'indirizzo contenuto in <code>RBX</code>".</li>
+<li>La dimensione dell'operazione è determinata dall'istruzione e dal registro
+  usato: <code>eax</code> implica 32 bit, <code>rax</code> 64 bit.</li>
+</ul>
+<p>Strumenti (non istruzioni) per osservare la macchina su Linux:</p>
+<div class="highlight"><pre><span></span><code>lscpu<span class="w">                          </span><span class="c1"># modello, core, thread, cache</span>
+getconf<span class="w"> </span>PAGE_SIZE<span class="w">              </span><span class="c1"># dimensione pagina (spesso 4096)</span>
+getconf<span class="w"> </span>LEVEL1_DCACHE_LINESIZE<span class="w"> </span><span class="c1"># linea cache dati L1 (spesso 64)</span>
+grep<span class="w"> </span>-E<span class="w"> </span><span class="s1">'MHz|cache size'</span><span class="w"> </span>/proc/cpuinfo
+</code></pre></div>
+
+<hr />
+<h2 id="5-esempi-semplici-commentati">5. Esempi semplici commentati</h2>
+<h3 id="esempio-1-un-dword-in-cache">Esempio 1 — Un <code>dword</code> in cache</h3>
+<div class="highlight"><pre><span></span><code><span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="nb">rbx</span><span class="p">]</span>
+</code></pre></div>
+
+<ul>
+<li>legge 4 byte a partire dall'indirizzo in <code>RBX</code>;</li>
+<li>se l'indirizzo è allineato a 4 e la linea è in L1, costa pochi cicli;</li>
+<li>se attraversa il confine di una linea di cache, servono due linee;</li>
+<li>se attraversa il confine di una pagina non mappata, si ha un fault.</li>
+</ul>
+<h3 id="esempio-2-sedici-interi-una-linea">Esempio 2 — Sedici interi, una linea</h3>
+<p>Un array di 16 <code>int</code> (4 byte ciascuno) occupa 64 byte: <strong>una</strong> linea di cache su
+x86-64. Sommarli in sequenza è efficiente: dopo il primo accesso, gli altri 15
+sono nella stessa linea.</p>
+<h3 id="esempio-3-registro-vs-memoria">Esempio 3 — Registro vs memoria</h3>
+<div class="highlight"><pre><span></span><code><span class="nf">add</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="nb">ecx</span><span class="w">        </span><span class="c1">; solo ALU, nessun accesso alla memoria</span>
+<span class="nf">add</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="nb">rbx</span><span class="p">]</span><span class="w">      </span><span class="c1">; carica dalla memoria, poi somma</span>
+</code></pre></div>
+
+<p>La prima è molto più prevedibile e veloce. La seconda dipende dalla cache: può
+costare pochi cicli o centinaia. Non è "colpa dell'istruzione", è la gerarchia
+delle memorie.</p>
+<h3 id="esempio-4-lo-stesso-indirizzo-virtuale-processi-diversi">Esempio 4 — Lo stesso indirizzo virtuale, processi diversi</h3>
+<p>Due processi possono usare entrambi l'indirizzo virtuale <code>0x400000</code>. La MMU,
+usando tabelle diverse, li mappa su frame fisici diversi. È l'isolamento della
+memoria virtuale: nessun processo vede la RAM dell'altro.</p>
+<hr />
+<h2 id="6-esempi-piu-complessi">6. Esempi più complessi</h2>
+<h3 id="61-un-ciclo-di-somma-dove-vanno-i-cicli">6.1 Un ciclo di somma: dove vanno i cicli</h3>
+<div class="highlight"><pre><span></span><code><span class="c1">; rdi = puntatore all'array di int</span>
+<span class="c1">; rsi = numero di elementi</span>
+<span class="w">    </span><span class="nf">xor</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="nb">eax</span><span class="w">          </span><span class="c1">; somma = 0</span>
+<span class="w">    </span><span class="nf">xor</span><span class="w"> </span><span class="nb">ecx</span><span class="p">,</span><span class="w"> </span><span class="nb">ecx</span><span class="w">          </span><span class="c1">; indice = 0</span>
+<span class="nl">.loop:</span>
+<span class="w">    </span><span class="nf">add</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="nb">rdi</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">rcx</span><span class="o">*</span><span class="mi">4</span><span class="p">]</span><span class="w"> </span><span class="c1">; somma += array[i]</span>
+<span class="w">    </span><span class="nf">inc</span><span class="w"> </span><span class="nb">rcx</span><span class="w">                </span><span class="c1">; i++</span>
+<span class="w">    </span><span class="nf">cmp</span><span class="w"> </span><span class="nb">rcx</span><span class="p">,</span><span class="w"> </span><span class="nb">rsi</span><span class="w">           </span><span class="c1">; i &lt; n ?</span>
+<span class="w">    </span><span class="nf">jb</span><span class="w">  </span><span class="nv">.loop</span><span class="w">              </span><span class="c1">; salto se unsigned below</span>
+</code></pre></div>
+
+<p>Analisi:</p>
+<ul>
+<li><strong>Cache</strong>: accesso sequenziale → località spaziale ottima. Ogni 16 iterazioni
+  si passa a una nuova linea (64 byte / 4 byte per <code>int</code> = 16 elementi).</li>
+<li><strong>Pipeline</strong>: <code>add eax, ...</code> ha una dipendenza <em>loop-carried</em> su <code>eax</code>: ogni
+  iterazione dipende dalla precedente. Il compilatore potrebbe spezzare la somma
+  in più accumulatori parziali per aumentare l'ILP.</li>
+<li><strong>Salti</strong>: <code>jb .loop</code> è quasi sempre preso per <code>n</code> grande: la predizione è
+  facile. L'errore avviene solo all'ultima iterazione.</li>
+<li><strong>Load</strong>: <code>add eax, [mem]</code> è tradotta in load + add; la latenza del load (4–5
+  cicli in L1) può dominare se non c'è parallelismo sufficiente.</li>
+<li><strong>Flag</strong>: <code>inc</code> modifica <code>ZF/SF/OF/PF</code> ma <strong>non</strong> <code>CF</code>; il <code>cmp</code> successivo
+  imposta i flag usati da <code>jb</code>. (Dettagli nei moduli 6 e 7.)</li>
+</ul>
+<p>Morale: un ciclo Assembly "sembra" breve, ma il tempo reale dipende da cache,
+dipendenze, predizione e larghezza delle unità.</p>
+<h3 id="62-page-fault-e-memoria-virtuale">6.2 Page fault e memoria virtuale</h3>
+<p>Un programma accede a un indirizzo di un array allocato con <code>malloc</code> ma mai
+toccato:</p>
+<ol>
+<li>la pagina è mappata ma non ancora fisicamente presente (o è copy-on-write);</li>
+<li>la CPU genera un <strong>page fault</strong>;</li>
+<li>il kernel trova la pagina libera, la inizializza (o la carica dal file), aggiorna
+   la tabella delle pagine;</li>
+<li>l'istruzione viene rieseguita e completa.</li>
+</ol>
+<p>Il primo accesso è quindi molto più lento dei successivi. È uno dei motivi per
+cui "inizializzare" un buffer prima di usarlo può spostare il costo, non
+eliminarlo.</p>
+<h3 id="63-perche-la-stessa-istruzione-ha-costi-diversi">6.3 Perché la stessa istruzione ha costi diversi</h3>
+<p><code>mov eax, [rbx]</code> può costare:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Situazione</th>
+<th>Costo indicativo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>linea in L1D</td>
+<td>4–5 cicli</td>
+</tr>
+<tr>
+<td>linea in L2</td>
+<td>10–20 cicli</td>
+</tr>
+<tr>
+<td>linea in L3</td>
+<td>30–70 cicli</td>
+</tr>
+<tr>
+<td>linea in RAM</td>
+<td>centinaia di cicli</td>
+</tr>
+<tr>
+<td>page fault</td>
+<td>migliaia di cicli (o terminazione)</td>
+</tr>
+</tbody>
+</table></div>
+<p>L'istruzione è identica; cambia il <strong>percorso nella gerarchia</strong>. Questo è il
+motivo per cui Assembly e prestazioni non si possono separare dall'architettura.</p>
+<hr />
+<h2 id="7-collegamenti-con-argomenti-precedenti">7. Collegamenti con argomenti precedenti</h2>
+<ul>
+<li><strong>Modulo 1</strong>: il ciclo Fetch–Decode–Execute, <code>RIP</code>, cache, memoria virtuale e
+  CISC/RISC sono stati introdotti; qui sono stati approfonditi.</li>
+<li><strong>Modulo 1, "come funziona un programma"</strong>: il loader, lo stack iniziale e le
+  system call sono il ponte tra architettura e sistema operativo.</li>
+<li><strong>In avanti — Modulo 3</strong>: indirizzamento e accesso alla memoria; qui abbiamo
+  visto <em>perché</em> la memoria è organizzata a byte e pagine.</li>
+<li><strong>Modulo 4</strong>: struttura NASM e sezioni (<code>.text</code>, <code>.data</code>, <code>.bss</code>), che
+  corrispondono alle regioni del processo viste qui.</li>
+<li><strong>Modulo 7</strong>: flag e <code>RFLAGS</code>; qui abbiamo visto dove si collocano.</li>
+<li><strong>Modulo 9</strong>: stack e chiamate; lo stack è una regione dello spazio di
+  indirizzi.</li>
+<li><strong>Modulo 13</strong>: syscall, page fault e I/O.</li>
+<li><strong>Modulo 15</strong>: ottimizzazione e misure con <code>perf</code>; qui abbiamo capito <em>cosa</em>
+  misurare.</li>
+</ul>
+<hr />
+<h2 id="8-errori-frequenti">8. Errori frequenti</h2>
+<ol>
+<li><strong>"Word = 32 bit"</strong>: su x86 <code>word</code> = 16 bit; su ARM64 "word" = 32 bit. Il
+   termine è architettura-dipendente.</li>
+<li><strong>Confondere frequenza e prestazioni</strong>: 4 GHz non batte automaticamente
+   3 GHz; contano IPC, cache, core e carico.</li>
+<li><strong>"Core = thread"</strong>: un core può ospitare più thread hardware (SMT), e i
+   thread del sistema operativo sono un'altra cosa ancora.</li>
+<li><strong>"L'hyper-threading raddoppia le prestazioni"</strong>: condivide le unità di
+   esecuzione; il guadagno è parziale e dipende dal carico.</li>
+<li><strong>"La RAM è tutta ugualmente veloce"</strong>: cache, righe, banchi e pattern di
+   accesso cambiano radicalmente i tempi.</li>
+<li><strong>"Indirizzo virtuale = indirizzo fisico"</strong>: la MMU traduce; due processi
+   possono usare lo stesso indirizzo virtuale per frame diversi.</li>
+<li><strong>"64 bit = 64 bit di indirizzo"</strong>: su x86-64 la memoria virtuale è a 48 bit
+   (57 con paginazione a 5 livelli).</li>
+<li><strong>"La ROM non si può modificare"</strong>: flash ed EEPROM si aggiornano; la mask
+   ROM no.</li>
+<li><strong>"Harvard significa due memorie fisiche separate"</strong>: nei processori moderni
+   è spesso una separazione di cache (Harvard modificata), con RAM unica.</li>
+<li><strong>"CISC è vecchio e lento, RISC è nuovo e veloce"</strong>: i core x86 traducono in
+    micro-operazioni; il confronto dipende dall'implementazione.</li>
+<li><strong>"Un accesso non allineato va sempre in fault"</strong>: su x86 funziona (con
+    possibile penalità); su altre architetture dipende.</li>
+<li><strong>Confondere i segmenti x86 con i segmenti ELF</strong>: i primi sono un meccanismo
+    della CPU (oggi quasi disattivato), i secondi sono regioni descritte dai
+    program header del file eseguibile.</li>
+<li><strong>"La cache è una sola"</strong>: L1I, L1D, L2, L3, TLB sono cache diverse con
+    scopi e comportamenti diversi.</li>
+<li><strong>Dimenticare il costo dei page fault</strong>: il primo accesso a memoria nuova può
+    costare migliaia di cicli.</li>
+</ol>
+<hr />
+<h2 id="9-riepilogo-finale">9. Riepilogo finale</h2>
+<ul>
+<li>Un calcolatore è CPU + memoria + cache + bus + periferiche, con il sistema
+  operativo a gestire risorse e protezione.</li>
+<li>La CPU esegue un ciclo Fetch–Decode–Execute; i processori reali usano pipeline,
+  superscalarità, out-of-order, predizione e cache.</li>
+<li>Frequenza ≠ prestazioni: contano IPC, cache, core, latenza della memoria.</li>
+<li>Core, thread hardware e thread software sono tre concetti distinti.</li>
+<li>La gerarchia registri → cache → RAM → disco sfrutta località temporale e
+  spaziale; le latenze crescono di ordini di grandezza.</li>
+<li>La memoria è indirizzabile a byte; "word" ha significati diversi tra x86 e
+  ARM64; x86-64 è little-endian.</li>
+<li>La memoria virtuale fornisce isolamento, protezione, condivisione e ASLR tramite
+  pagine, tabelle delle pagine e TLB.</li>
+<li>Von Neumann usa una memoria unica; Harvard ne usa due; i processori moderni
+  sono Harvard modificata (L1 separate, RAM unica).</li>
+<li>CISC (x86) punta su istruzioni ricche e codice denso; RISC (ARM64, MIPS,
+  RISC-V) su istruzioni semplici, load-store e pipeline regolari. Nessuna delle
+  due è "sempre migliore".</li>
+<li>Le prestazioni di un programma Assembly dipendono dall'interazione tra
+  istruzioni, cache, memoria virtuale e microarchitettura.</li>
+</ul>
+<hr />
+<h2 id="10-esercizi-di-verifica">10. Esercizi di verifica</h2>
+<blockquote>
+<p>Soluzioni non incluse. Chiedile quando vuoi.</p>
+</blockquote>
+<h3 id="esercizi-facili">Esercizi facili</h3>
+<ol>
+<li>Elenca i cinque componenti principali di un calcolatore e la funzione di
+   ciascuno.</li>
+<li>Descrivi i quattro stadi del ciclo di istruzione e indica cosa fa <code>RIP</code>.</li>
+<li>Che differenza c'è tra RAM, ROM e cache?</li>
+<li>Perché esiste la gerarchia delle memorie? Cita località temporale e spaziale.</li>
+<li>Che cosa sono un core, un thread hardware e un thread software?</li>
+</ol>
+<h3 id="esercizi-intermedi">Esercizi intermedi</h3>
+<ol start="6">
+<li>Spiega perché la frequenza del clock da sola non determina le prestazioni.</li>
+<li>Descrivi una situazione in cui un accesso a <code>mov eax, [rbx]</code> costa pochi
+   cicli e una in cui ne costa centinaia.</li>
+<li>Perché su x86 <code>word</code> significa 16 bit? Che cosa significa su ARM64?</li>
+<li>Spiega il ruolo di MMU, tabelle delle pagine, TLB e page fault.</li>
+<li>Confronta von Neumann e Harvard, poi spiega perché i processori moderni sono
+    "Harvard modificata".</li>
+<li>Riassumi le differenze tra CISC e RISC con almeno cinque criteri.</li>
+</ol>
+<h3 id="esercizi-difficili">Esercizi difficili</h3>
+<ol start="12">
+<li>Un programma accede a un array di 1 MiB in ordine sequenziale e uno in ordine
+    casuale. Spiega perché il primo è molto più veloce, citando linee di cache e
+    località.</li>
+<li>Due processi scrivono nello stesso indirizzo virtuale <code>0x400000</code>. Perché non
+    si sovrascrivono? Quali strutture hardware e software lo impediscono?</li>
+<li>Spiega perché un ciclo con una dipendenza <em>loop-carried</em> su un registro può
+    essere più lento di un ciclo con due accumulatori indipendenti.</li>
+<li>Perché la distinzione CISC/RISC non basta a prevedere quale processore sarà
+    più veloce su un dato programma?</li>
+</ol>
+<h3 id="esercizi-prevedi-il-risultato">Esercizi "prevedi il risultato"</h3>
+<ol start="16">
+<li>Un array di 32 <code>int</code> (4 byte) viene letto in sequenza. Quante linee di cache
+    da 64 byte vengono toccate come minimo?</li>
+<li>Un accesso a <code>dword</code> parte da un indirizzo <code>0x...FFE</code>. Cosa succede a livello
+    di linea di cache?</li>
+<li>Un processo accede per la prima volta a una pagina mallocata e mai usata.
+    Cosa succede e perché il primo accesso è più lento dei successivi?</li>
+<li>Su una macchina con 4 core e SMT attivo, <code>nproc</code> restituisce 8. Quanti core
+    fisici ci sono e perché?</li>
+<li>Un eseguibile x86-64 "64 bit" usa indirizzi virtuali a 48 bit. Cosa significa
+    concretamente e perché non usa tutti i 64 bit?</li>
+</ol>
+<h3 id="esercizi-scrivi-da-zero">Esercizi "scrivi da zero"</h3>
+<ol start="21">
+<li>Scrivi lo pseudo-codice di un programma che somma un array di <code>int</code> e indica
+    quali strutture (registri, memoria, cache) intervengono a ogni passo.</li>
+<li>Descrivi, senza scrivere codice definitivo, come modificheresti il ciclo del
+    paragrafo 6.1 per usare due accumulatori e aumentare l'ILP.</li>
+<li>Progetta (a parole) un esperimento per misurare la differenza tra un accesso
+    sequenziale e uno casuale a un array, indicando cosa misureresti e come.</li>
+</ol>
+<hr />
+<p><strong>Prossimo modulo</strong>: il Modulo 3 del tuo programma. Dimmi <strong>"prosegui"</strong> quando
+sei pronto, oppure chiedi chiarimenti o le soluzioni degli esercizi.</p>
+    <nav class="lesson-nav" aria-label="Navigazione tra le lezioni"><a class="prev" href="../docs/01-introduzione-assembly.html"><span class="label">Precedente</span>Introduzione all&#x27;Assembly</a><a class="next" href="../docs/03-rappresentazione-dati.html"><span class="label">Successivo</span>Rappresentazione dei dati</a></nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p>AssemblyDocs — documentazione didattica su x86-64, NASM e Linux.</p>
+    <p><a href="../index.html">Torna all'indice</a></p>
+  </div>
+</footer>
+</body>
+</html>

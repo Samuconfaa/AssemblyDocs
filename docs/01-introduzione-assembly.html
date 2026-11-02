@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Modulo 1 — Introduzione all&#x27;Assembly — AssemblyDocs">
+  <title>Modulo 1 — Introduzione all&#x27;Assembly · AssemblyDocs</title>
+  <link rel="stylesheet" href="../highlight.css">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<a class="skip-link" href="#contenuto">Salta al contenuto</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="../index.html">
+      <span class="brand-mark" aria-hidden="true">A</span>
+      <span>Assembly<span class="brand-accent">Docs</span></span>
+    </a>
+    <nav class="top-nav" aria-label="Navigazione principale">
+      <a href="../index.html">Home</a>
+      <a href="../index.html#moduli">Moduli</a>
+      <a href="../index.html#progetto">Progetto</a>
+    </nav>
+  </div>
+</header>
+<div class="page">
+  <aside class="sidebar">
+    <p class="sidebar-label">Percorso</p>
+    <ol class="module-list">
+      <li><a class="current" href="../docs/01-introduzione-assembly.html" aria-current="page"><span class="num">01</span><span>Introduzione all&#x27;Assembly</span></a></li>
+<li><a href="../docs/02-architettura-calcolatore.html"><span class="num">02</span><span>Architettura del calcolatore</span></a></li>
+<li><a href="../docs/03-rappresentazione-dati.html"><span class="num">03</span><span>Rappresentazione dei dati</span></a></li>
+<li><a href="../docs/04-registri-cpu.html"><span class="num">04</span><span>Registri della CPU</span></a></li>
+<li><a href="../docs/05-struttura-sintassi.html"><span class="num">05</span><span>Struttura e sintassi</span></a></li>
+    </ol>
+    <div class="sidebar-note">
+      <p><strong>Riferimento</strong></p>
+      <p>x86-64 · sintassi Intel · NASM · Linux</p>
+    </div>
+  </aside>
+  <main id="contenuto" class="content">
+    <h1 id="modulo-1-introduzione-allassembly">Modulo 1 — Introduzione all'Assembly</h1>
+<details class="toc" open><summary>In questa lezione</summary><div class="toc">
+<ul>
+<li><a href="#1-introduzione-e-definizione">1. Introduzione e definizione</a></li>
+<li><a href="#2-spiegazione-teorica-approfondita">2. Spiegazione teorica approfondita</a><ul>
+<li><a href="#21-che-cose-assembly-punto-11-del-programma">2.1 Che cos'è Assembly (punto 1.1 del programma)</a></li>
+<li><a href="#22-come-funziona-un-programma-punto-12-del-programma">2.2 Come funziona un programma (punto 1.2 del programma)</a></li>
+<li><a href="#23-confronto-con-altri-linguaggi-punto-13-del-programma">2.3 Confronto con altri linguaggi (punto 1.3 del programma)</a></li>
+<li><a href="#24-applicazioni-dellassembly-punto-14-del-programma">2.4 Applicazioni dell'Assembly (punto 1.4 del programma)</a></li>
+</ul>
+</li>
+<li><a href="#3-funzionamento-passo-per-passo">3. Funzionamento passo per passo</a></li>
+<li><a href="#4-sintassi-e-istruzioni-coinvolte">4. Sintassi e istruzioni coinvolte</a></li>
+<li><a href="#5-esempi-semplici-commentati">5. Esempi semplici commentati</a><ul>
+<li><a href="#esempio-1-decodificare-byte">Esempio 1 — decodificare byte</a></li>
+<li><a href="#esempio-2-riconoscere-unistruzione-dal-testo">Esempio 2 — riconoscere un'istruzione dal testo</a></li>
+<li><a href="#esempio-3-dalla-sorgente-alleseguibile">Esempio 3 — dalla sorgente all'eseguibile</a></li>
+</ul>
+</li>
+<li><a href="#6-esempi-piu-complessi">6. Esempi più complessi</a><ul>
+<li><a href="#61-da-una-funzione-c-allassembly">6.1 Da una funzione C all'Assembly</a></li>
+<li><a href="#62-la-stessa-funzione-su-arm64">6.2 La stessa funzione su ARM64</a></li>
+<li><a href="#63-un-processo-dallinizio-alla-fine">6.3 Un processo dall'inizio alla fine</a></li>
+</ul>
+</li>
+<li><a href="#7-collegamenti-con-argomenti-precedenti">7. Collegamenti con argomenti precedenti</a></li>
+<li><a href="#8-errori-frequenti">8. Errori frequenti</a></li>
+<li><a href="#9-riepilogo-finale">9. Riepilogo finale</a></li>
+<li><a href="#10-esercizi-di-verifica">10. Esercizi di verifica</a><ul>
+<li><a href="#esercizi-facili">Esercizi facili</a></li>
+<li><a href="#esercizi-intermedi">Esercizi intermedi</a></li>
+<li><a href="#esercizi-difficili">Esercizi difficili</a></li>
+<li><a href="#esercizi-prevedi-il-risultato">Esercizi "prevedi il risultato"</a></li>
+<li><a href="#esercizi-scrivi-da-zero">Esercizi "scrivi da zero"</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</details>
+
+<blockquote>
+<p><strong>Prerequisiti</strong>: nessuno.
+<strong>Architettura di riferimento</strong>: x86-64, sintassi Intel, NASM, Linux 64 bit.
+<strong>Obiettivo del modulo</strong>: capire <em>che cosa</em> è l'Assembly, <em>dove</em> si colloca
+rispetto a linguaggi e hardware, e <em>come</em> un programma viene eseguito.</p>
+</blockquote>
+<hr />
+<h2 id="1-introduzione-e-definizione">1. Introduzione e definizione</h2>
+<p><strong>Assembly</strong> (o <em>linguaggio assembly</em>) è una famiglia di linguaggi di
+programmazione che rappresentano in forma testuale e mnemonica le istruzioni di
+una specifica <strong>ISA</strong> (<em>Instruction Set Architecture</em>), cioè l'insieme delle
+istruzioni che un processore sa eseguire.</p>
+<p>Tre definizioni utili, da tenere separate:</p>
+<ol>
+<li><strong>Linguaggio macchina</strong>: la sequenza di byte che il processore esegue
+   direttamente. È l'unico linguaggio che la CPU comprende.</li>
+<li><strong>Linguaggio assembly</strong>: la rappresentazione leggibile di quei byte tramite
+   nomi simbolici (<em>mnemonici</em>) come <code>mov</code>, <code>add</code>, <code>jmp</code>, più nomi per registri e
+   indirizzi.</li>
+<li><strong>Programma eseguibile</strong>: un file (su Linux, in formato ELF) che contiene il
+   codice macchina, i dati e le informazioni che il sistema operativo usa per
+   caricarlo in memoria.</li>
+</ol>
+<p>Il punto centrale: <strong>l'Assembly non viene eseguito dal processore</strong>. Il
+processore esegue byte. L'Assembly è il livello di scrittura che un <em>assembler</em>
+traduce in quei byte. A runtime l'Assembly non esiste più.</p>
+<p>Altra precisazione fondamentale: <strong>"Assembly" non è un solo linguaggio</strong>. È un
+nome collettivo. L'Assembly x86-64 è diverso dall'Assembly ARM64, che è diverso
+dall'Assembly MIPS. Persino sulla stessa ISA esistono <strong>dialetti sintattici</strong>
+diversi (NASM, GAS, MASM): stesso codice macchina, testo diverso.</p>
+<hr />
+<h2 id="2-spiegazione-teorica-approfondita">2. Spiegazione teorica approfondita</h2>
+<h3 id="21-che-cose-assembly-punto-11-del-programma">2.1 Che cos'è Assembly (punto 1.1 del programma)</h3>
+<h4 id="livelli-di-astrazione">Livelli di astrazione</h4>
+<p>Un linguaggio ad alto livello (C, Python, Java) descrive <em>che cosa</em> calcolare e
+delega a qualcun altro <em>come</em> farlo. L'Assembly descrive <em>come</em>, istruzione per
+istruzione.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Livello</th>
+<th>Esempio</th>
+<th>Chi traduce</th>
+<th>Cosa vedi tu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alto livello</td>
+<td><code>if (a &lt; b) c = a + b;</code></td>
+<td>compilatore / interprete</td>
+<td>variabili, tipi, blocchi</td>
+</tr>
+<tr>
+<td>Assembly</td>
+<td><code>cmp edi, esi</code> / <code>jge ...</code> / <code>add eax, edi</code></td>
+<td>assembler</td>
+<td>registri, memoria, salti</td>
+</tr>
+<tr>
+<td>Macchina</td>
+<td><code>39 F7</code>, <code>7D 05</code>, <code>01 F8</code></td>
+<td>— (eseguito dalla CPU)</td>
+<td>byte</td>
+</tr>
+</tbody>
+</table></div>
+<p>Un linguaggio ad alto livello <strong>nasconde</strong>: i registri, la posizione esatta delle
+variabili in memoria, la dimensione degli oggetti, la gestione dello stack, le
+convenzioni di chiamata. L'Assembly <strong>espone tutto questo</strong>.</p>
+<p>Conseguenze pratiche di essere "a basso livello":</p>
+<ul>
+<li>Non esistono tipi veri: esistono <strong>dimensioni</strong> (byte, word, dword, qword) e
+  interpretazioni (intero con segno, senza segno, indirizzo, carattere).</li>
+<li>Non esiste la gestione automatica della memoria: niente garbage collector,
+  niente controlli dei limiti, niente inizializzazione automatica.</li>
+<li>Non esistono costrutti: un <code>if</code> è un confronto seguito da un salto; un ciclo è
+  un salto all'indietro; una funzione è una <code>call</code>.</li>
+<li>Il codice è <strong>specifico per l'architettura</strong>: istruzioni, registri e codifiche
+  cambiano da ISA a ISA. Un eseguibile x86-64 non gira su ARM64 (serve emulazione
+  o traduzione, come QEMU o Rosetta 2).</li>
+</ul>
+<h4 id="isa-e-microarchitettura-due-cose-diverse">ISA e microarchitettura: due cose diverse</h4>
+<ul>
+<li><strong>ISA</strong>: il contratto visibile al software. Definisce istruzioni, registri,
+  modalità di indirizzamento, tipi di dato, formato delle istruzioni, modello di
+  memoria, comportamento in caso di errore.</li>
+<li><strong>Microarchitettura</strong>: <em>come</em> un particolare processore implementa l'ISA
+  (pipeline, cache, unità di esecuzione). Due CPU con la stessa ISA (es. Intel e
+  AMD per x86-64) eseguono lo stesso binario con prestazioni diverse.</li>
+</ul>
+<p>L'<strong>ABI</strong> (<em>Application Binary Interface</em>) è un livello ancora diverso: non dice
+quali istruzioni esistono, ma <em>come</em> le funzioni si parlano (dove passano i
+parametri, chi preserva quali registri, allineamento dello stack). Ne parleremo
+nel Modulo 9 e nel Modulo 14.</p>
+<h4 id="cisc-e-risc">CISC e RISC</h4>
+<ul>
+<li><strong>x86-64</strong> è di impostazione <strong>CISC</strong>: istruzioni di lunghezza variabile
+  (da 1 a 15 byte), molti modi di indirizzamento, istruzioni che operano
+  direttamente su memoria.</li>
+<li><strong>ARM64, MIPS, RISC-V</strong> sono di impostazione <strong>RISC</strong> (<em>load-store</em>): poche
+  istruzioni semplici, lunghezza per lo più fissa, accesso alla memoria solo con
+  istruzioni di caricamento/salvataggio dedicate.</li>
+</ul>
+<p>Questa distinzione è storica e pratica, ma non va assolutizzata: i processori
+x86 moderni decodificano le istruzioni complesse in micro-operazioni interne,
+quindi "CISC vs RISC" descrive l'ISA, non necessariamente il funzionamento
+interno.</p>
+<h4 id="codifica-delle-istruzioni-opcode-e-operandi">Codifica delle istruzioni: opcode e operandi</h4>
+<p>Un'istruzione macchina contiene almeno:</p>
+<ul>
+<li>un <strong>opcode</strong>: il codice dell'operazione (<code>mov</code>, <code>add</code>, <code>jmp</code>, ...);</li>
+<li>zero o più <strong>operandi</strong>: su cosa opera (registri, memoria, valori immediati).</li>
+</ul>
+<p>Su x86-64 un'istruzione può avere, oltre a opcode e operandi, campi aggiuntivi:</p>
+<ul>
+<li><strong>prefissi</strong> (es. dimensione dell'operando, ripetizione);</li>
+<li><strong>REX</strong>, che in 64 bit estende registri e larghezza degli operandi;</li>
+<li><strong>ModR/M</strong> e <strong>SIB</strong>, che descrivono la forma degli operandi (registro,
+  memoria, indirizzamento con base e indice);</li>
+<li>uno <strong>spostamento</strong> (<em>displacement</em>) e/o un <strong>immediato</strong>.</li>
+</ul>
+<p>Esempio concreto e verificabile:</p>
+<div class="highlight"><pre><span></span><code>B8 3C 00 00 00     ; mov eax, 60
+0F 05              ; syscall
+</code></pre></div>
+
+<ul>
+<li><code>B8</code> è l'opcode di <code>mov</code> verso un registro a 32 bit con immediato a 32 bit;</li>
+<li><code>3C 00 00 00</code> è il valore 60 (0x3C) scritto in <strong>little-endian</strong>: il byte meno
+  significativo per primo;</li>
+<li><code>0F 05</code> è la codifica di <code>syscall</code>.</li>
+</ul>
+<p>Da qui si vede perché l'Assembly è più leggibile del codice macchina, ma anche
+perché la corrispondenza non è "una riga = un byte": una riga può occupare da 1 a
+15 byte.</p>
+<h4 id="assembly-e-codice-sorgente">Assembly e codice sorgente</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Concetto</th>
+<th>Natura</th>
+<th>Chi lo usa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sorgente <code>.asm</code></td>
+<td>testo</td>
+<td>il programmatore</td>
+</tr>
+<tr>
+<td>Oggetto <code>.o</code></td>
+<td>binario rilocabile</td>
+<td>l'assembler produce, il linker consuma</td>
+</tr>
+<tr>
+<td>Eseguibile</td>
+<td>binario con intestazioni e punti di ingresso</td>
+<td>il sistema operativo</td>
+</tr>
+</tbody>
+</table></div>
+<p>Il percorso tipico su Linux:</p>
+<div class="highlight"><pre><span></span><code>main.asm --(nasm -f elf64)--&gt; main.o --(ld)--&gt; main
+</code></pre></div>
+
+<p>L'assembler traduce i mnemonici in byte e produce un file oggetto ELF
+rilocabile; il linker risolve i riferimenti (simboli, indirizzi) e produce
+l'eseguibile; il <strong>loader</strong> del sistema operativo lo carica in memoria e
+trasferisce il controllo al punto di ingresso.</p>
+<p>Attenzione: non tutto ciò che scrivi in un file <code>.asm</code> diventa un'istruzione.
+Le <strong>direttive</strong> (<code>section .text</code>, <code>global _start</code>, <code>db</code>, <code>equ</code>) sono istruzioni
+per l'assembler, non per la CPU. Anche le <strong>macro</strong> vengono espanse e possono
+generare più istruzioni. La corrispondenza 1:1 vale per le istruzioni, non per
+l'intero file.</p>
+<h4 id="differenze-tra-le-architetture">Differenze tra le architetture</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Aspetto</th>
+<th>8086 (16 bit)</th>
+<th>x86 32 bit</th>
+<th>x86-64</th>
+<th>ARM64</th>
+<th>MIPS</th>
+<th>RISC-V</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Registri generali</td>
+<td>8 da 16 bit</td>
+<td>8 da 32 bit</td>
+<td>16 da 64 bit</td>
+<td>31 da 64 bit + zero/SP</td>
+<td>32 da 32/64 bit</td>
+<td>32 (x0 = zero)</td>
+</tr>
+<tr>
+<td>Program counter</td>
+<td><code>IP</code></td>
+<td><code>EIP</code></td>
+<td><code>RIP</code></td>
+<td><code>PC</code> non scrivibile direttamente</td>
+<td><code>PC</code></td>
+<td><code>PC</code></td>
+</tr>
+<tr>
+<td>Lunghezza istruzioni</td>
+<td>variabile</td>
+<td>variabile</td>
+<td>variabile (1–15 B)</td>
+<td>fissa 4 B (A64)</td>
+<td>fissa 4 B</td>
+<td>4 B, 2 B con estensione C</td>
+</tr>
+<tr>
+<td>Accesso a memoria</td>
+<td>molti operandi in memoria</td>
+<td>molti operandi in memoria</td>
+<td>molti operandi in memoria</td>
+<td>solo load/store</td>
+<td>solo load/store</td>
+<td>solo load/store</td>
+</tr>
+<tr>
+<td>Flag</td>
+<td>sì (<code>FLAGS</code>)</td>
+<td>sì (<code>EFLAGS</code>)</td>
+<td>sì (<code>RFLAGS</code>)</td>
+<td>solo <code>NZCV</code> tramite confronti</td>
+<td>no flag centrali</td>
+<td>nessun registro flag</td>
+</tr>
+<tr>
+<td>Modello di memoria</td>
+<td>segmentato, 1 MB</td>
+<td>flat, 4 GB</td>
+<td>flat, 64 bit virtuali</td>
+<td>flat</td>
+<td>flat</td>
+<td>flat</td>
+</tr>
+</tbody>
+</table></div>
+<p>Dettagli che vale la pena fissare subito:</p>
+<ul>
+<li><strong>8086 / modalità reale</strong>: indirizzi a 20 bit ottenuti combinando <em>segmento</em> e
+  <em>offset</em> (<code>CS</code>, <code>DS</code>, <code>SS</code>, <code>ES</code>), limite di 1 MB, nessuna protezione della
+  memoria. È la modalità in cui parte un bootloader.</li>
+<li><strong>x86 32 bit</strong>: registri <code>eax</code>...<code>edi</code>, memoria "flat" a 4 GB, convenzioni di
+  chiamata come <code>cdecl</code> e <code>stdcall</code>.</li>
+<li><strong>x86-64</strong>: aggiunge <code>r8</code>–<code>r15</code>, estende i registri a 64 bit, introduce
+  l'indirizzamento relativo a <code>RIP</code> e la convenzione System V AMD64 su Linux.</li>
+<li><strong>ARM64 (A64)</strong>: istruzioni a 4 byte, nessuna scrittura diretta del <code>PC</code>,
+  parametri nei registri <code>x0</code>–<code>x7</code>, risultato in <code>x0</code>. La maggior parte delle
+  istruzioni non tocca i flag: si confrontano esplicitamente i valori.</li>
+<li><strong>ARM32 (A32)</strong>: 16 registri, esecuzione condizionale su quasi tutte le
+  istruzioni, variante Thumb a 16 bit.</li>
+<li><strong>MIPS</strong>: 32 registri (<code>$0</code> è sempre zero), <em>delay slot</em> dopo i salti, risultati
+  di moltiplicazione/divisione in <code>HI</code>/<code>LO</code>.</li>
+<li><strong>RISC-V</strong>: 32 registri (<code>x0</code> è zero cablato), nessun registro flag, ISA modulare
+  (<code>M</code> per moltiplicazione, <code>A</code> per atomici, <code>F</code>/<code>D</code> per virgola mobile, <code>C</code> per
+  istruzioni compresse).</li>
+</ul>
+<hr />
+<h3 id="22-come-funziona-un-programma-punto-12-del-programma">2.2 Come funziona un programma (punto 1.2 del programma)</h3>
+<h4 id="il-modello-di-von-neumann">Il modello di von Neumann</h4>
+<p>Un calcolatore è composto da CPU, memoria e dispositivi di I/O collegati da bus.
+Nel modello di von Neumann <strong>istruzioni e dati stanno nella stessa memoria</strong>: è
+questo che permette a un programma di essere caricato come dati e poi eseguito
+come codice.</p>
+<p>Componenti della CPU che ci interessano:</p>
+<ul>
+<li><strong>unità di controllo</strong>: legge, decodifica e coordina l'esecuzione;</li>
+<li><strong>ALU</strong>: esegue operazioni aritmetiche e logiche;</li>
+<li><strong>registri</strong>: memoria interna piccolissima e velocissima;</li>
+<li><strong>cache</strong> (L1/L2/L3): memoria intermedia tra registri e RAM;</li>
+<li><strong>contatore di programma</strong> (<code>RIP</code> su x86-64): indirizzo della prossima
+  istruzione;</li>
+<li><strong>registro dei flag</strong> (<code>RFLAGS</code>): esito dell'ultima operazione (zero, segno,
+  riporto, overflow, ...).</li>
+</ul>
+<p>Gerarchia delle memorie, dal più veloce al più lento: registri → cache → RAM →
+disco. Più ci si allontana dalla CPU, più aumenta la latenza.</p>
+<h4 id="ruolo-della-memoria">Ruolo della memoria</h4>
+<p>La RAM è un insieme di <strong>byte numerati</strong>. Ogni byte ha un indirizzo. Le variabili
+non hanno nomi a runtime: hanno indirizzi. Un intero a 32 bit occupa 4 byte
+consecutivi; su x86-64 i byte sono memorizzati in <strong>little-endian</strong>.</p>
+<p>Il sistema operativo offre a ogni processo uno <strong>spazio di indirizzi virtuale</strong>:
+il programma vede indirizzi che non coincidono con quelli fisici. Le mappe di
+paginazione traducono indirizzi virtuali in fisici e permettono isolamento e
+protezione tra processi. Un programma tipico ha regioni distinte per codice,
+dati inizializzati, dati non inizializzati, heap e stack.</p>
+<h4 id="ruolo-dei-registri">Ruolo dei registri</h4>
+<p>I registri sono la memoria di lavoro della CPU. Sono pochi e velocissimi.
+Contengono valori temporanei, indirizzi, contatori, puntatori allo stack.</p>
+<p>Un registro <strong>non è una variabile persistente</strong>: quando il sistema operativo
+passa da un processo all'altro (<em>context switch</em>) salva e ripristina lo stato dei
+registri. Il programmatore non deve assumere che un registro mantenga un valore
+"per sempre", soprattutto attraverso chiamate e interruzioni.</p>
+<h4 id="ruolo-del-sistema-operativo">Ruolo del sistema operativo</h4>
+<p>Il sistema operativo, per un programma:</p>
+<ol>
+<li>crea un processo e uno spazio di indirizzi;</li>
+<li>carica l'eseguibile in memoria (loader);</li>
+<li>imposta lo stack e i parametri iniziali;</li>
+<li>porta <code>RIP</code> al punto di ingresso (<code>_start</code>);</li>
+<li>gestisce le <strong>system call</strong> (richieste al kernel: leggere, scrivere, uscire);</li>
+<li>gestisce l'I/O, lo scheduling e la protezione (modalità utente vs kernel).</li>
+</ol>
+<p>Un programma utente non può accedere direttamente a porte hardware o a memoria
+del kernel: deve chiedere tramite system call. Su x86-64 Linux si usa
+l'istruzione <code>syscall</code>, con il numero della chiamata in <code>rax</code> e gli argomenti in
+registri concordati (<code>rdi</code>, <code>rsi</code>, <code>rdx</code>, <code>r10</code>, <code>r8</code>, <code>r9</code>).</p>
+<h4 id="ciclo-fetchdecodeexecute">Ciclo Fetch–Decode–Execute</h4>
+<p>Il modello classico, in quattro fasi:</p>
+<ol>
+<li><strong>Fetch</strong>: la CPU legge dalla memoria l'istruzione all'indirizzo contenuto in
+   <code>RIP</code>.</li>
+<li><strong>Decode</strong>: interpreta i byte, riconosce opcode e operandi, determina
+   l'operazione e la lunghezza dell'istruzione.</li>
+<li><strong>Execute</strong>: esegue l'operazione (ALU, accesso a memoria, salto, ...).</li>
+<li><strong>Writeback</strong>: scrive il risultato in un registro o in memoria, aggiorna i
+   flag e aggiorna <code>RIP</code>.</li>
+</ol>
+<p><code>RIP</code> avanza automaticamente alla fine dell'istruzione appena eseguita, a meno
+che l'istruzione non sia un salto, una chiamata, un ritorno o un'eccezione.</p>
+<p><strong>Onestà sul modello</strong>: i processori moderni non eseguono una istruzione alla
+volta. Hanno pipeline (fasi sovrapposte), esecuzione <em>superscalare</em> (più
+istruzioni per ciclo), esecuzione <em>out-of-order</em>, predizione dei salti e cache.
+Il ciclo Fetch–Decode–Execute resta il modello concettuale corretto per capire
+<em>che cosa</em> succede, non per contare i cicli di clock.</p>
+<h4 id="dalla-sorgente-allesecuzione">Dalla sorgente all'esecuzione</h4>
+<div class="highlight"><pre><span></span><code>testo .asm
+   │  assembler (nasm)
+   ▼
+oggetto .o  (codice + dati + tabella dei simboli + rilocazioni)
+   │  linker (ld)
+   ▼
+eseguibile ELF  (intestazioni, sezioni, punto di ingresso)
+   │  loader (kernel)
+   ▼
+processo in memoria  (RIP = _start, stack pronto)
+   │
+   ▼
+esecuzione delle istruzioni, una dopo l'altra (concettualmente)
+   │
+   ▼
+system call exit → il processo termina
+</code></pre></div>
+
+<h4 id="unistruzione-tanti-operandi">Un'istruzione, tanti operandi</h4>
+<p>Un'istruzione può avere operandi di tre nature:</p>
+<ul>
+<li><strong>registro</strong>: <code>eax</code>, <code>rdi</code>, ...</li>
+<li><strong>memoria</strong>: <code>[rbx]</code>, <code>[rbp - 8]</code>, <code>[tabella + rcx*4]</code>, ...</li>
+<li><strong>immediato</strong>: una costante codificata nell'istruzione, es. <code>60</code>.</li>
+</ul>
+<p>Il numero e il tipo di operandi dipendono dall'istruzione: <code>mov</code> ne ha due,
+<code>inc</code> ne ha uno, <code>ret</code> nessuno. Non tutte le combinazioni sono ammesse: ad
+esempio non si può fare <code>mov [a], [b]</code> (memoria → memoria) su x86; serve un
+registro intermedio.</p>
+<hr />
+<h3 id="23-confronto-con-altri-linguaggi-punto-13-del-programma">2.3 Confronto con altri linguaggi (punto 1.3 del programma)</h3>
+<h4 id="assembly-vs-c">Assembly vs C</h4>
+<p>Il C è il linguaggio più vicino all'Assembly: un compilatore C traduce
+direttamente in Assembly e poi in codice macchina. Molti costrutti C hanno una
+traduzione quasi diretta:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>C</th>
+<th>Idea in Assembly</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a + b</code></td>
+<td><code>add</code> su registri</td>
+</tr>
+<tr>
+<td><code>if (x == 0)</code></td>
+<td><code>cmp</code>/<code>test</code> + salto condizionato</td>
+</tr>
+<tr>
+<td><code>for (...)</code></td>
+<td>etichetta + <code>inc</code>/<code>cmp</code> + salto</td>
+</tr>
+<tr>
+<td>chiamata di funzione</td>
+<td><code>call</code> + convenzione ABI</td>
+</tr>
+<tr>
+<td>variabile locale</td>
+<td>posizione sullo stack o in un registro</td>
+</tr>
+</tbody>
+</table></div>
+<p>Differenze cruciali:</p>
+<ul>
+<li>Il C ha <strong>tipi</strong> e regole; l'Assembly no. In C un <code>int</code> è almeno 16 bit (32 su
+  Linux x86-64); in Assembly decidi tu la larghezza dell'operazione.</li>
+<li>Il C ha <strong>comportamento indefinito</strong> (overflow con segno, accesso fuori dai
+  limiti, uso dopo <code>free</code>). In Assembly non c'è una rete di sicurezza: il
+  comportamento è quello che l'hardware fa, anche se è un disastro.</li>
+<li>Il compilatore C <strong>ottimizza</strong>: riordina, elimina codice, usa istruzioni SIMD.
+  L'Assembly scritto a mano è ottimo per controllo preciso, ma nella maggior
+  parte dei casi un buon compilatore produce codice uguale o migliore.</li>
+</ul>
+<h4 id="assembly-vs-c_1">Assembly vs C++</h4>
+<p>Il C++ aggiunge astrazioni (classi, template, RAII, eccezioni, RTTI). A livello
+di codice macchina molte astrazioni <strong>svaniscono</strong>: una chiamata a un metodo non
+virtuale è una normale <code>call</code>; un <code>std::vector</code> è un puntatore più due dimensioni
+e chiamate a funzioni. Altre hanno un costo: tabelle virtuali, gestione delle
+eccezioni, distruttori, allocazioni.</p>
+<p>In Assembly non esiste nulla di tutto questo: se vuoi una "classe" devi
+costruirtela con memoria e convenzioni.</p>
+<h4 id="assembly-vs-python">Assembly vs Python</h4>
+<p>Python (CPython) non viene compilato in codice macchina: viene compilato in
+<strong>bytecode</strong> per una macchina virtuale, che è a sua volta un programma C. Ogni
+operazione Python passa attraverso il ciclo dell'interprete, con controlli
+dinamici dei tipi, gestione degli oggetti e conteggio dei riferimenti.</p>
+<p>Distanza di astrazione: enorme. Un ciclo Python che somma un milione di numeri
+esegue milioni di iterazioni dell'interprete; lo stesso ciclo in Assembly esegue
+milioni di poche istruzioni native. Da qui i divari di prestazioni di uno o due
+ordini di grandezza, che però dipendono dal carico di lavoro e dalle librerie
+native usate.</p>
+<h4 id="assembly-vs-java">Assembly vs Java</h4>
+<p>Java compila in <strong>bytecode</strong> eseguito dalla JVM. La JVM però non si limita a
+interpretare: il <strong>JIT</strong> compila a runtime le parti più usate in codice macchina,
+sfruttando informazioni raccolte durante l'esecuzione. Il risultato può essere
+molto vicino (a volte migliore) di un programma C compilato staticamente, perché
+il JIT conosce il comportamento reale del programma.</p>
+<p>Anche qui: il linguaggio non è "lento" in sé; il costo dipende da macchina
+virtuale, garbage collector, allocazioni e JIT.</p>
+<h4 id="tabella-riassuntiva">Tabella riassuntiva</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th>Assembly</th>
+<th>C</th>
+<th>C++</th>
+<th>Python</th>
+<th>Java</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Astrazione</td>
+<td>minima</td>
+<td>bassa</td>
+<td>media/alta</td>
+<td>alta</td>
+<td>alta</td>
+</tr>
+<tr>
+<td>Portabilità del sorgente</td>
+<td>nulla</td>
+<td>alta</td>
+<td>alta</td>
+<td>alta</td>
+<td>alta</td>
+</tr>
+<tr>
+<td>Controllo dell'hardware</td>
+<td>totale</td>
+<td>limitato</td>
+<td>limitato</td>
+<td>nullo</td>
+<td>nullo</td>
+</tr>
+<tr>
+<td>Gestione memoria</td>
+<td>manuale</td>
+<td>manuale</td>
+<td>manuale/RAII</td>
+<td>automatica</td>
+<td>automatica (GC)</td>
+</tr>
+<tr>
+<td>Prestazioni tipiche</td>
+<td>massime se scritto bene</td>
+<td>molto alte</td>
+<td>molto alte</td>
+<td>basse</td>
+<td>alte (JIT)</td>
+</tr>
+<tr>
+<td>Manutenibilità</td>
+<td>bassa</td>
+<td>media</td>
+<td>media</td>
+<td>alta</td>
+<td>alta</td>
+</tr>
+<tr>
+<td>Debug</td>
+<td>difficile</td>
+<td>medio</td>
+<td>medio</td>
+<td>facile</td>
+<td>facile</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="quando-usare-assembly">Quando usare Assembly</h4>
+<p><strong>Sì, ha senso</strong> quando serve:</p>
+<ul>
+<li>controllo esatto di registri, flag, istruzioni o timing;</li>
+<li>accesso a funzionalità non esposte dal linguaggio (porte I/O, MSR, istruzioni
+  speciali);</li>
+<li>codice che deve girare senza runtime né librerie (bootloader, firmware, codice
+  di avvio);</li>
+<li>vincoli estremi di dimensione o prestazioni, dopo aver misurato;</li>
+<li>crittografia che deve essere <em>constant-time</em> e resistere ad attacchi temporali;</li>
+<li>reverse engineering, analisi di malware, sicurezza, didattica.</li>
+</ul>
+<p><strong>No, non ha senso</strong> per la logica applicativa: portabilità, manutenibilità e
+costi di sviluppo sono quasi sempre più importanti del guadagno teorico.</p>
+<hr />
+<h3 id="24-applicazioni-dellassembly-punto-14-del-programma">2.4 Applicazioni dell'Assembly (punto 1.4 del programma)</h3>
+<ul>
+<li><strong>Sistemi embedded</strong>: microcontrollori con poche risorse (AVR, PIC, 8051,
+  Cortex-M). L'Assembly serve per routine di interrupt, inizializzazione,
+  timing stretto, risparmio di memoria. Oggi molto codice embedded è in C, ma il
+  livello di avvio e i punti critici restano spesso in Assembly.</li>
+<li><strong>Sistemi operativi</strong>: cambio di contesto, ingresso delle interruzioni,
+  gestione della memoria, stub delle system call, codice di avvio. Il kernel è
+  scritto in gran parte in C, ma i punti in cui il C non basta sono in Assembly
+  (o in C con <code>asm</code> inline).</li>
+<li><strong>Bootloader</strong>: il firmware parte in modalità reale a 16 bit; il primo settore
+  (MBR, 512 byte, firma <code>0x55AA</code>) deve stare in uno spazio minuscolo, quindi si
+  scrive in Assembly. Poi si passa a modalità protetta o long mode. UEFI cambia
+  le regole: si usano eseguibili PE e molto C.</li>
+<li><strong>Driver e interazione con l'hardware</strong>: I/O su porte (<code>in</code>/<code>out</code>), accesso a
+  registri speciali, descrittori DMA. Spesso C con <code>asm</code> inline o <em>intrinsic</em>.</li>
+<li><strong>Ottimizzazione</strong>: cicli interni, elaborazione di immagini/audio, DSP, uso di
+  SIMD (SSE/AVX, NEON). Prima si misura con strumenti come <code>perf</code>, poi si
+  interviene.</li>
+<li><strong>Reverse engineering</strong>: disassemblare binari (<code>objdump</code>, Ghidra, IDA),
+  ricostruire logica, analizzare firmware e malware.</li>
+<li><strong>Sicurezza informatica</strong>: shellcode, ROP/JOP, exploit da buffer overflow,
+  studio delle mitigazioni (NX, ASLR, stack canary, CET). Anche difesa: codice
+  constant-time, hardening, analisi di vulnerabilità.</li>
+<li><strong>Debugging a basso livello</strong>: <code>gdb</code>, breakpoint, watchpoint, ispezione di
+  registri e memoria, core dump, analisi di crash senza sorgente.</li>
+</ul>
+<hr />
+<h2 id="3-funzionamento-passo-per-passo">3. Funzionamento passo per passo</h2>
+<p>Prendiamo un programma minimo (anteprima del Modulo 4; qui interessa solo
+seguire l'esecuzione, non imparare la sintassi NASM):</p>
+<div class="highlight"><pre><span></span><code><span class="k">section</span><span class="w"> </span><span class="nv">.text</span>
+<span class="k">global</span><span class="w"> </span><span class="nv">_start</span>
+
+<span class="nl">_start:</span>
+<span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="w">      </span><span class="c1">; numero della system call: exit</span>
+<span class="w">    </span><span class="nf">xor</span><span class="w"> </span><span class="nb">edi</span><span class="p">,</span><span class="w"> </span><span class="nb">edi</span><span class="w">     </span><span class="c1">; codice di uscita = 0</span>
+<span class="w">    </span><span class="nf">syscall</span><span class="w">          </span><span class="c1">; invoca il kernel</span>
+</code></pre></div>
+
+<p>Codice macchina corrispondente:</p>
+<div class="highlight"><pre><span></span><code>B8 3C 00 00 00    mov eax, 60
+31 FF             xor edi, edi
+0F 05             syscall
+</code></pre></div>
+
+<p>Traccia dell'esecuzione:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Passo</th>
+<th><code>RIP</code></th>
+<th>Istruzione</th>
+<th>Effetto sui registri</th>
+<th>Effetto sui flag</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>indirizzo di <code>_start</code></td>
+<td>—</td>
+<td><code>RSP</code> punta allo stack; <code>argc</code>/<code>argv</code> sono sullo stack</td>
+<td>valore iniziale</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>_start</code></td>
+<td>fetch/decode/execute di <code>mov eax, 60</code></td>
+<td><code>EAX = 60</code>; <code>RAX</code> diventa <code>0x000000000000003C</code></td>
+<td><strong>invariati</strong> (<code>mov</code> non modifica i flag)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>_start + 5</code></td>
+<td><code>xor edi, edi</code></td>
+<td><code>EDI = 0</code></td>
+<td><code>ZF = 1</code>, <code>CF = 0</code>, <code>OF = 0</code>, <code>SF = 0</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>_start + 7</code></td>
+<td><code>syscall</code></td>
+<td>il kernel legge <code>RAX = 60</code> → <code>exit</code>, <code>RDI = 0</code> → stato</td>
+<td>il processo termina</td>
+</tr>
+</tbody>
+</table></div>
+<p>Dettagli da notare:</p>
+<ul>
+<li><strong><code>mov eax, 60</code> scrive un registro a 32 bit</strong>: su x86-64, scrivere <code>EAX</code>
+  azzera automaticamente la parte alta di <code>RAX</code>. È una regola dell'architettura,
+  non una convenzione. (La vedremo nel Modulo 2.)</li>
+<li><strong><code>mov</code> non tocca i flag</strong>: i flag cambiano solo con istruzioni che li
+  producono (aritmetiche, logiche, confronti).</li>
+<li><strong><code>xor edi, edi</code> azzera un registro</strong> e imposta <code>ZF = 1</code>. È un modo comune per
+  mettere a zero: più corto di <code>mov edi, 0</code> (2 byte contro 5).</li>
+<li><strong><code>syscall</code> non "torna" al programma</strong>: la system call <code>exit</code> termina il
+  processo. Il codice dopo non verrebbe eseguito.</li>
+<li>Il codice di uscita 0 è visibile nella shell con <code>echo $?</code>.</li>
+</ul>
+<hr />
+<h2 id="4-sintassi-e-istruzioni-coinvolte">4. Sintassi e istruzioni coinvolte</h2>
+<p>In questo modulo <strong>non ci sono istruzioni da imparare a memoria</strong>. Le tre
+istruzioni viste sono anticipazioni:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Istruzione</th>
+<th>Significato</th>
+<th>Modulo in cui sarà formalizzata</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mov</code></td>
+<td>copia un valore in un registro o in memoria</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>xor</code></td>
+<td>OR esclusivo bit a bit; con operandi uguali azzera</td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>syscall</code></td>
+<td>richiesta al kernel Linux</td>
+<td>13</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ciò che invece è già utile sapere è la <strong>forma</strong> di una riga Assembly NASM:</p>
+<div class="highlight"><pre><span></span><code><span class="nl">etichetta:</span><span class="w">  </span><span class="nf">mnemonico</span><span class="w"> </span><span class="nv">operando1</span><span class="p">,</span><span class="w"> </span><span class="nv">operando2</span><span class="w">   </span><span class="c1">; commento</span>
+</code></pre></div>
+
+<ul>
+<li><code>etichetta:</code> è un nome simbolico per un indirizzo (facoltativa);</li>
+<li><code>mnemonico</code> è l'operazione;</li>
+<li>gli operandi sono separati da virgola;</li>
+<li><code>;</code> introduce un commento fino a fine riga.</li>
+</ul>
+<p>E le <strong>direttive</strong> (non istruzioni):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Direttiva</th>
+<th>Significato</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>section .text</code></td>
+<td>inizia la sezione del codice eseguibile</td>
+</tr>
+<tr>
+<td><code>section .data</code></td>
+<td>dati inizializzati</td>
+</tr>
+<tr>
+<td><code>section .bss</code></td>
+<td>dati non inizializzati</td>
+</tr>
+<tr>
+<td><code>global _start</code></td>
+<td>esporta il simbolo <code>_start</code> (punto di ingresso)</td>
+</tr>
+<tr>
+<td><code>db</code>, <code>dw</code>, <code>dd</code>, <code>dq</code></td>
+<td>definiscono dati di 1, 2, 4, 8 byte</td>
+</tr>
+</tbody>
+</table></div>
+<p>Infine, la differenza di <strong>dialetto</strong>. Lo stesso codice macchina si scrive:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">; NASM, sintassi Intel: destinazione, sorgente</span>
+<span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># GAS, sintassi AT&amp;T: sorgente, destinazione, con % e $</span>
+<span class="nf">movl</span><span class="w"> </span><span class="no">$60</span><span class="p">,</span><span class="w"> </span><span class="nv">%eax</span>
+</code></pre></div>
+
+<p>Chi impara l'Assembly deve sapere che Intel e AT&amp;T descrivono la <strong>stessa</strong>
+macchina con ordine degli operandi e simboli diversi. Non sono architetture
+diverse, sono notazioni diverse.</p>
+<hr />
+<h2 id="5-esempi-semplici-commentati">5. Esempi semplici commentati</h2>
+<h3 id="esempio-1-decodificare-byte">Esempio 1 — decodificare byte</h3>
+<div class="highlight"><pre><span></span><code>B8 3C 00 00 00
+</code></pre></div>
+
+<ul>
+<li><code>B8</code>: opcode "copia un immediato a 32 bit in un registro a 32 bit";</li>
+<li><code>3C 00 00 00</code>: immediato in little-endian → <code>0x0000003C</code> = 60;</li>
+<li>poiché l'opcode <code>B8</code> indica il registro <code>EAX</code>, l'istruzione è <code>mov eax, 60</code>.</li>
+</ul>
+<h3 id="esempio-2-riconoscere-unistruzione-dal-testo">Esempio 2 — riconoscere un'istruzione dal testo</h3>
+<div class="highlight"><pre><span></span><code>31 C0
+</code></pre></div>
+
+<ul>
+<li><code>31</code> è l'opcode di <code>xor</code> con operando registro/memoria e registro;</li>
+<li><code>C0</code> è il byte ModR/M che codifica "registro <code>eax</code> con <code>eax</code>";</li>
+<li>quindi <code>xor eax, eax</code>: azzera <code>EAX</code> e imposta <code>ZF = 1</code>.</li>
+</ul>
+<h3 id="esempio-3-dalla-sorgente-alleseguibile">Esempio 3 — dalla sorgente all'eseguibile</h3>
+<div class="highlight"><pre><span></span><code>nasm<span class="w"> </span>-f<span class="w"> </span>elf64<span class="w"> </span>uscita.asm<span class="w"> </span>-o<span class="w"> </span>uscita.o<span class="w">   </span><span class="c1"># traduce il testo in oggetto ELF64</span>
+ld<span class="w"> </span>uscita.o<span class="w"> </span>-o<span class="w"> </span>uscita<span class="w">                  </span><span class="c1"># collega e produce l'eseguibile</span>
+./uscita<span class="w">                               </span><span class="c1"># esegue</span>
+<span class="nb">echo</span><span class="w"> </span><span class="nv">$?</span><span class="w">                                </span><span class="c1"># mostra il codice di uscita (0)</span>
+</code></pre></div>
+
+<p>Ogni comando ha un ruolo distinto: <code>nasm</code> non produce un eseguibile, <code>ld</code> non
+compila, il loader del kernel non assembla nulla.</p>
+<hr />
+<h2 id="6-esempi-piu-complessi">6. Esempi più complessi</h2>
+<h3 id="61-da-una-funzione-c-allassembly">6.1 Da una funzione C all'Assembly</h3>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="nf">somma</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Una traduzione <strong>illustrativa</strong> in x86-64, convenzione System V AMD64 (i
+parametri interi arrivano in <code>edi</code>, <code>esi</code>; il risultato torna in <code>eax</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="nl">somma:</span>
+<span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="nb">edi</span><span class="w">     </span><span class="c1">; risultato = primo parametro</span>
+<span class="w">    </span><span class="nf">add</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="nb">esi</span><span class="w">     </span><span class="c1">; risultato += secondo parametro</span>
+<span class="w">    </span><span class="nf">ret</span><span class="w">              </span><span class="c1">; torna al chiamante</span>
+</code></pre></div>
+
+<p>Lettura:</p>
+<ul>
+<li><code>edi</code> ed <code>esi</code> contengono <code>a</code> e <code>b</code> per convenzione, non per magia: è l'ABI
+  che lo stabilisce;</li>
+<li><code>eax</code> è il registro del valore di ritorno;</li>
+<li><code>ret</code> preleva dallo stack l'indirizzo di ritorno e lo mette in <code>RIP</code>.</li>
+</ul>
+<p>Un compilatore reale potrebbe generare <code>lea eax, [rdi + rsi]</code>, oppure
+ottimizzare la funzione in modi diversi a seconda del contesto. L'output esatto
+dipende da compilatore, versione e opzioni: <strong>non va memorizzato</strong>, va letto.</p>
+<h3 id="62-la-stessa-funzione-su-arm64">6.2 La stessa funzione su ARM64</h3>
+<div class="highlight"><pre><span></span><code><span class="nl">somma:</span>
+<span class="w">    </span><span class="nf">add</span><span class="w"> </span><span class="no">w0</span><span class="p">,</span><span class="w"> </span><span class="no">w0</span><span class="p">,</span><span class="w"> </span><span class="no">w1</span><span class="w">   </span><span class="c1">; x0/w0 = primo parametro e valore di ritorno, x1/w1 = secondo</span>
+<span class="w">    </span><span class="nf">ret</span>
+</code></pre></div>
+
+<p>Confronto: stesse idee (parametri in registri, risultato in registro, ritorno con
+<code>ret</code>), ma registri, nomi e convenzioni cambiano. Questo è il senso di "Assembly
+è specifico per l'architettura".</p>
+<h3 id="63-un-processo-dallinizio-alla-fine">6.3 Un processo dall'inizio alla fine</h3>
+<ol>
+<li>Scrivi <code>uscita.asm</code>.</li>
+<li><code>nasm</code> produce <code>uscita.o</code> con una sezione <code>.text</code> e il simbolo <code>_start</code>.</li>
+<li><code>ld</code> produce <code>uscita</code>, un ELF con punto di ingresso <code>_start</code>.</li>
+<li>La shell chiede al kernel di eseguirlo; il kernel crea il processo, mappa
+   l'eseguibile, prepara lo stack.</li>
+<li><code>RIP</code> punta a <code>_start</code>; la CPU esegue <code>mov</code>, <code>xor</code>, <code>syscall</code>.</li>
+<li>Il kernel esegue <code>exit(0)</code> e il processo termina.</li>
+<li>La shell legge il codice di uscita.</li>
+</ol>
+<p>In tutto questo, l'Assembly è servito <strong>solo nel passaggio 1→2</strong>. Dopo, esistono
+solo byte e hardware.</p>
+<hr />
+<h2 id="7-collegamenti-con-argomenti-precedenti">7. Collegamenti con argomenti precedenti</h2>
+<p>Questo è il primo modulo, quindi i collegamenti sono soprattutto in avanti:</p>
+<ul>
+<li><strong>Modulo 2 (registri)</strong>: qui abbiamo solo nominato <code>RAX</code>, <code>RDI</code>, <code>RIP</code>,
+  <code>RFLAGS</code>. Nel prossimo modulo vedremo dimensioni, nomi storici (<code>AX</code>, <code>EAX</code>,
+  <code>RAX</code>), usi e regole.</li>
+<li><strong>Modulo 3 (memoria e indirizzamento)</strong>: qui abbiamo parlato di byte,
+  indirizzi e little-endian; là vedremo come si accede davvero alla memoria.</li>
+<li><strong>Modulo 4 (struttura NASM)</strong>: la sintassi vista qui in anteprima diventerà
+  completa.</li>
+<li><strong>Modulo 7 (flag)</strong>: <code>ZF</code>, <code>CF</code>, <code>OF</code>, <code>SF</code> sono stati solo citati.</li>
+<li><strong>Modulo 9 (stack e funzioni)</strong>: <code>ret</code> e la convenzione di chiamata.</li>
+<li><strong>Modulo 13 (system call)</strong>: <code>syscall</code>, <code>rax</code>, <code>rdi</code>.</li>
+<li><strong>Modulo 14 (interfacciamento con C)</strong>: l'ABI System V in dettaglio.</li>
+</ul>
+<p>Collegamento con conoscenze pregresse: se conosci C, molte cose ti sembreranno
+familiari ma "senza rete di sicurezza"; se conosci Python o Java, il salto è più
+grande perché qui non c'è nessuna macchina virtuale che ti protegga.</p>
+<hr />
+<h2 id="8-errori-frequenti">8. Errori frequenti</h2>
+<ol>
+<li><strong>"L'Assembly è un linguaggio solo"</strong>: no, è una famiglia; x86-64, ARM64 e
+   MIPS hanno istruzioni diverse.</li>
+<li><strong>Confondere ISA e sintassi</strong>: <code>mov eax, 60</code> (NASM) e <code>movl $60, %eax</code> (GAS)
+   sono la stessa istruzione macchina. Intel/AT&amp;T sono dialetti, non
+   architetture.</li>
+<li><strong>Credere che la CPU esegua l'Assembly</strong>: la CPU esegue byte. L'Assembly è
+   testo per l'assembler.</li>
+<li><strong>Confondere sorgente ed eseguibile</strong>: <code>nasm</code> produce un oggetto, non un
+   eseguibile; serve il linker.</li>
+<li><strong>Pensare che "basso livello" significhi "sempre più veloce"</strong>: un Assembly
+   scritto male è più lento di un buon C compilato.</li>
+<li><strong>Pensare che una riga di C corrisponda a una riga di Assembly</strong>: il
+   compilatore può generare zero, una o molte istruzioni.</li>
+<li><strong>Credere che i registri conservino i valori tra processi o chiamate</strong>: il
+   sistema operativo li salva e ripristina; l'ABI stabilisce chi li preserva.</li>
+<li><strong>Dimenticare che <code>mov</code> non imposta i flag</strong>: molti principianti si aspettano
+   che <code>mov eax, 0</code> imposti <code>ZF</code>. Non lo fa.</li>
+<li><strong>Assumere che il ciclo Fetch–Decode–Execute descriva i tempi reali</strong>: i
+   processori moderni sono pipeline fuori ordine con predizione.</li>
+<li><strong>Dimenticare la dimensione degli operandi</strong>: <code>mov eax, ...</code> e
+    <code>mov rax, ...</code> non sono la stessa cosa, anche se il valore è piccolo.</li>
+<li><strong>Scrivere indirizzi a mano in un eseguibile moderno</strong>: ASLR, PIE e
+    rilocazioni cambiano gli indirizzi a runtime.</li>
+<li><strong>Confondere "Assembly" con "reverse engineering"</strong>: il reverse engineering
+    <em>usa</em> la lettura dell'Assembly, non è la stessa disciplina.</li>
+</ol>
+<hr />
+<h2 id="9-riepilogo-finale">9. Riepilogo finale</h2>
+<ul>
+<li>L'Assembly è la rappresentazione mnemonica delle istruzioni di una ISA; la CPU
+  esegue solo codice macchina.</li>
+<li>Ogni architettura ha il suo Assembly; sulla stessa ISA possono esistere più
+  dialetti sintattici (NASM/Intel, GAS/AT&amp;T).</li>
+<li>Un'istruzione macchina contiene opcode e operandi; su x86-64 la lunghezza è
+  variabile (1–15 byte) e la codifica usa campi come ModR/M, SIB, displacement e
+  immediato.</li>
+<li>Un programma percorre: sorgente → oggetto → eseguibile → processo in memoria.</li>
+<li>Il processore esegue il ciclo Fetch–Decode–Execute; <code>RIP</code> indica la prossima
+  istruzione, <code>RFLAGS</code> registra l'esito delle operazioni.</li>
+<li>La memoria è indirizzata a byte ed è little-endian su x86-64; il sistema
+  operativo fornisce memoria virtuale, stack, protezione e system call.</li>
+<li>I registri sono pochi, veloci e non persistenti; l'ABI decide chi li preserva.</li>
+<li>Rispetto ai linguaggi ad alto livello, l'Assembly offre controllo totale ma
+  niente sicurezza, portabilità o manutenzione facile.</li>
+<li>L'Assembly si usa dove serve controllo o assenza di runtime: avvio, kernel,
+  driver, embedded, crittografia, ottimizzazione mirata, sicurezza, didattica.</li>
+</ul>
+<hr />
+<h2 id="10-esercizi-di-verifica">10. Esercizi di verifica</h2>
+<blockquote>
+<p>Le soluzioni non sono incluse. Chiedile quando vuoi.</p>
+</blockquote>
+<h3 id="esercizi-facili">Esercizi facili</h3>
+<ol>
+<li>Spiega con parole tue la differenza tra linguaggio assembly e linguaggio
+   macchina.</li>
+<li>Elenca tre cose che un linguaggio ad alto livello nasconde e che l'Assembly
+   espone.</li>
+<li>Che cosa contiene un file oggetto <code>.o</code> e perché non è ancora un eseguibile?</li>
+<li>Descrivi le quattro fasi del ciclo Fetch–Decode–Execute e il ruolo di <code>RIP</code>.</li>
+<li>Cita tre applicazioni reali dell'Assembly e spiega in una frase perché lì è
+   utile.</li>
+</ol>
+<h3 id="esercizi-intermedi">Esercizi intermedi</h3>
+<ol start="6">
+<li>Decodifica questi byte e spiega cosa fa ciascuna istruzione:
+   <code>B8 3C 00 00 00</code>, <code>31 C0</code>, <code>0F 05</code>.</li>
+<li>Perché <code>xor eax, eax</code> è preferibile a <code>mov eax, 0</code> per azzerare un registro?
+   Considera sia la dimensione del codice sia i flag.</li>
+<li>Spiega perché scrivere <code>mov eax, 60</code> su x86-64 azzera anche la parte alta di
+   <code>RAX</code>.</li>
+<li>Un programma C contiene <code>int f(int a, int b) { return a + b; }</code>. Perché non
+   puoi sapere a priori quante istruzioni Assembly genererà il compilatore?</li>
+<li>Descrivi il percorso completo di un file <code>.asm</code> fino alla sua esecuzione,
+    indicando il ruolo di assembler, linker, loader e kernel.</li>
+</ol>
+<h3 id="esercizi-difficili">Esercizi difficili</h3>
+<ol start="11">
+<li>Spiega perché la stessa istruzione Assembly non può essere portata
+    direttamente da x86-64 a ARM64, mentre un programma C può essere ricompilato.</li>
+<li>Confronta l'uso dei flag in x86-64 e in ARM64: perché in ARM64 molte
+    operazioni non aggiornano alcun flag?</li>
+<li>Un programma scritto in Assembly risulta più lento di uno equivalente in C
+    compilato con <code>-O2</code>. Elenca almeno quattro possibili cause.</li>
+<li>Spiega perché il modello Fetch–Decode–Execute è concettualmente corretto ma
+    inadeguato a prevedere le prestazioni reali di un programma.</li>
+</ol>
+<h3 id="esercizi-prevedi-il-risultato">Esercizi "prevedi il risultato"</h3>
+<ol start="15">
+<li>Dato il programma del paragrafo 3, quale valore ha <code>RAX</code> dopo la prima
+    istruzione? E <code>RDI</code> dopo la seconda? Quali flag cambiano?</li>
+<li>Se sostituisci <code>xor edi, edi</code> con <code>mov edi, 5</code>, quale codice di uscita
+    osserva la shell? Perché?</li>
+<li>Se il programma esegue <code>mov eax, 60</code> seguito da <code>mov edi, 0</code> e poi
+    <code>syscall</code>, il processo termina? Con quale stato?</li>
+<li>Se in un programma manca la <code>syscall</code> finale e il codice dopo è casuale
+    (byte non validi come istruzioni), cosa può succedere alla CPU?</li>
+<li>Un eseguibile compilato per ARM64 viene copiato su una macchina x86-64 e
+    avviato. Cosa succede e perché?</li>
+</ol>
+<h3 id="esercizi-scrivi-da-zero">Esercizi "scrivi da zero"</h3>
+<ol start="20">
+<li>Scrivi la traccia (non serve ancora la sintassi perfetta) di un programma
+    che termini con codice di uscita 42.</li>
+<li>Descrivi, in pseudo-Assembly, un ciclo che sommi i numeri da 1 a 10 in un
+    registro, indicando quale istruzione di confronto e quale salto useresti.</li>
+<li>Descrivi come tradurre in Assembly il costrutto
+    <code>if (x &gt; y) max = x; else max = y;</code>, specificando registri ipotetici per
+    <code>x</code>, <code>y</code>, <code>max</code>.</li>
+</ol>
+<hr />
+<p><strong>Prossimo modulo</strong>: <em>Modulo 2 — Registri x86-64</em>. Dimmi <strong>"prosegui"</strong> quando
+sei pronto, oppure chiedi chiarimenti, correzioni o le soluzioni degli esercizi.</p>
+    <nav class="lesson-nav" aria-label="Navigazione tra le lezioni"><span class="spacer"></span><a class="next" href="../docs/02-architettura-calcolatore.html"><span class="label">Successivo</span>Architettura del calcolatore</a></nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p>AssemblyDocs — documentazione didattica su x86-64, NASM e Linux.</p>
+    <p><a href="../index.html">Torna all'indice</a></p>
+  </div>
+</footer>
+</body>
+</html>
